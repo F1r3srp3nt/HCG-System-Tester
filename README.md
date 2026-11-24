@@ -19,6 +19,11 @@ macOS's own IOKit registry and shows what it is. It also shows exactly how far c
 A recognised name or USB ID only ever results in **Identified**. A device is only shown as **Connected** after it has actually
 exchanged data. Unknown devices are shown with their raw descriptors and are never assumed to support anything.
 
+![Command Center](docs/screenshots/01-commandCenter.jpg)
+
+*Command Center on a CI Mac: two real (virtual) USB devices discovered by IOKit, plus opt-in fixtures labelled SYNTHETIC.
+More screenshots and CI results are in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md).*
+
 ## Quick start (MacBook Pro, Apple silicon, Xcode)
 
 ```bash
@@ -85,6 +90,7 @@ docs/                         Architecture, SDK, testing, limitations, ecosystem
 
 - [Build & run on macOS](docs/BUILD.md)
 - [Physical-device test checklist](docs/PHYSICAL-TESTING.md)
+- [Test results (CI)](docs/TEST-RESULTS.md)
 - [Actual hardware compatibility limitations](docs/HARDWARE-LIMITATIONS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Hardware Adapter SDK](docs/ADAPTER-SDK.md)
