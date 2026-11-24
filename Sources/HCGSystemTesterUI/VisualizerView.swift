@@ -36,7 +36,7 @@ enum TopologyLayout {
         }
         let maxLevel = max(1, level.values.max() ?? 1)
         let rows = max(1, nextLeaf)
-        let marginX: CGFloat = 90, marginY: CGFloat = 60
+        let marginX: CGFloat = 130, marginY: CGFloat = 60
         let usableW = max(200, size.width - marginX * 2 - 120)
         let usableH = max(100, size.height - marginY * 2)
         var out: [String: CGPoint] = [:]
@@ -121,8 +121,9 @@ struct VisualizerView: View {
             } else {
                 context.stroke(path, with: .color(Theme.dim.opacity(0.4)), style: StrokeStyle(lineWidth: 1, dash: [3, 5]))
             }
+            // Label just before the child node, above the curve, so it never overlaps other nodes.
             let label = Text(e.label).font(.system(size: 9, weight: .medium)).foregroundColor(Theme.dim)
-            context.draw(label, at: CGPoint(x: mid, y: (a.y + b.y) / 2 - 8))
+            context.draw(label, at: CGPoint(x: b.x - 44, y: b.y - 11), anchor: .trailing)
         }
         // Nodes
         for n in g.nodes {
@@ -143,11 +144,15 @@ struct VisualizerView: View {
             var symbol = context.resolve(Image(systemName: symbolName(n)))
             symbol.shading = .color(color)
             context.draw(symbol, in: CGRect(x: p.x - radius * 0.5, y: p.y - radius * 0.5, width: radius, height: radius))
-            let title = Text(n.label).font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.text)
+            let title = Text(Self.truncated(n.label)).font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.text)
             context.draw(title, at: CGPoint(x: p.x, y: p.y + radius + 11))
             let sub = Text(n.status?.displayName ?? n.subtitle).font(.system(size: 9)).foregroundColor(n.status.map { Theme.color(for: $0) } ?? Theme.dim)
             context.draw(sub, at: CGPoint(x: p.x, y: p.y + radius + 24))
         }
+    }
+
+    static func truncated(_ text: String, limit: Int = 34) -> String {
+        text.count <= limit ? text : String(text.prefix(limit - 1)) + "…"
     }
 
     func nodeColor(_ n: TopologyNode) -> Color {

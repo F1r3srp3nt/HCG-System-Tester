@@ -211,7 +211,7 @@ private struct IdentityPanel: View {
     func topology(_ usb: USBDeviceDescriptor?) -> String {
         guard let usb = usb, let loc = usb.locationID else { return "—" }
         let path = usb.portPath.map(String.init).joined(separator: " → ")
-        return "Bus \(String(usb.busNumber ?? 0, radix: 16)) · port \(path.isEmpty ? "root" : path) · \(Hex.format32(loc))"
+        return "Bus \(usb.busNumber ?? 0) · port \(path.isEmpty ? "root" : path) · \(Hex.format32(loc))"
     }
 }
 

@@ -39,6 +39,7 @@ struct LaboratoryView: View {
             }
         }
         .workspacePage()
+        .onAppear { if selectedKey == nil { selectedKey = profiles.first(where: { $0.provenance == .hardware })?.key ?? profiles.first?.key } }
     }
 }
 

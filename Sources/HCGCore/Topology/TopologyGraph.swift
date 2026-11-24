@@ -73,7 +73,7 @@ public enum TopologyBuilder {
             } else if d.connectionType == .usb || d.usb != nil {
                 let bus = d.usb?.busNumber ?? 0
                 let busID = "bus:usb:\(bus)"
-                ensureBus(busID, label: "USB bus \(String(bus, radix: 16))", subtitle: "Root hub", kind: .bus, provenance: .hardware, type: .usb)
+                ensureBus(busID, label: "USB bus \(bus)", subtitle: "Root hub", kind: .bus, provenance: .hardware, type: .usb)
                 parentID = busID
             } else {
                 ensureBus("bus:\(d.connectionType.rawValue)", label: d.connectionType.displayName, subtitle: "Discovery group",
