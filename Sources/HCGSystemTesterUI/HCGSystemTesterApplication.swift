@@ -15,7 +15,10 @@ public struct HCGSystemTesterApplication: App {
                 .environmentObject(model)
                 .frame(minWidth: 1100, minHeight: 700)
                 .preferredColorScheme(.dark)
-                .onAppear { model.startIfNeeded() }
+                .onAppear {
+                    model.startIfNeeded()
+                    if SnapshotDriver.isActive { SnapshotDriver.run(model: model) }
+                }
                 .onOpenURL { model.handleIncoming($0) }
         }
         .defaultSize(width: 1480, height: 920)

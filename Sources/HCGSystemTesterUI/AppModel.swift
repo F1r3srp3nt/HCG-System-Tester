@@ -173,9 +173,7 @@ final class AppModel: ObservableObject {
             banner = "Real hardware discovery is unavailable on this platform."
         }
         for backend in hardwareBackends {
-            backend.start { [weak self] event in
-                Task { @MainActor in self?.handle(event) }
-            }
+            backend.start { @Sendable [weak self] event in self?.deliver(event) }
         }
     }
 
@@ -185,9 +183,7 @@ final class AppModel: ObservableObject {
     }
 
     private func startSynthetic() {
-        syntheticBackend.start { [weak self] event in
-            Task { @MainActor in self?.handle(event) }
-        }
+        syntheticBackend.start { @Sendable [weak self] event in self?.deliver(event) }
     }
 
     private func applySettingsChange(from old: AppSettings) {
@@ -201,10 +197,29 @@ final class AppModel: ObservableObject {
         refreshPublishedState()
     }
 
+    /// Snapshot mode only: shows labelled fixtures without persisting the preference.
+    func enableSyntheticFixturesForSnapshot() {
+        guard !settings.syntheticFixturesEnabled else { return }
+        startSynthetic()
+        refreshPublishedState()
+        snapshotSyntheticOverride = true
+        refreshPublishedState()
+    }
+
+    private var snapshotSyntheticOverride = false
+
     func restartDiscovery() {
         stopHardware()
         if settings.hardwareDiscoveryEnabled { startHardware() }
         banner = "Discovery restarted."
+    }
+
+    /// Called on a backend's queue. The main queue is FIFO, so attach/detach order is preserved
+    /// (separate `Task`s would not guarantee ordering).
+    nonisolated private func deliver(_ event: DiscoveryEvent) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.handle(event) }
+        }
     }
 
     private func handle(_ event: DiscoveryEvent) {
@@ -231,7 +246,9 @@ final class AppModel: ObservableObject {
     func refreshPublishedState() {
         var list = inventory.orderedRecords
         if !settings.showDisconnectedDevices { list = list.filter { $0.device.isPresent } }
-        if !settings.syntheticFixturesEnabled { list = list.filter { !$0.device.provenance.isSynthetic || $0.device.isPresent } }
+        if !settings.syntheticFixturesEnabled && !snapshotSyntheticOverride {
+            list = list.filter { !$0.device.provenance.isSynthetic || $0.device.isPresent }
+        }
         records = list
         events = inventory.events.reversed()
         backendStatuses = Array(inventory.backendStatuses.values).sorted { $0.backendID < $1.backendID }
@@ -284,7 +301,7 @@ final class AppModel: ObservableObject {
         let engine = self.engine
         let deviceID = record.id
         Task { @MainActor in
-            let run = await engine.run(testIDs: testIDs, context: ctx, authorization: auth) { [weak self] result in
+            let run = await engine.run(testIDs: testIDs, context: ctx, authorization: auth) { @Sendable [weak self] result in
                 Task { @MainActor in
                     self?.activeRuns[deviceID]?.results.append(result)
                 }

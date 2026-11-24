@@ -60,6 +60,29 @@ jobs:
         run: |
           if [ -x scripts/build-app.sh ]; then scripts/build-app.sh --configuration release --no-sign; fi
 
+      - name: Render UI snapshots (synthetic fixtures, read-only)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          APP_BIN="dist/HCG System Tester.app/Contents/MacOS/HCGSystemTester"
+          if [ ! -x "$APP_BIN" ]; then echo "app bundle not built"; exit 0; fi
+          mkdir -p snapshots
+          "$APP_BIN" --hcg-snapshot "$PWD/snapshots" > snapshots/app.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 120); do kill -0 $PID 2>/dev/null || break; sleep 1; done
+          kill $PID 2>/dev/null || true
+          ls -la snapshots
+          cat snapshots/devices.tsv 2>/dev/null || true
+          tail -n 40 snapshots/app.log || true
+
+      - name: Upload UI snapshots
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-snapshots
+          path: snapshots/
+          retention-days: 5
+          if-no-files-found: ignore
+
       - name: Build Xcode project
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
