@@ -65,7 +65,7 @@ final class DiscoveryParsingTests: XCTestCase {
     func testSpeedAndBCDHelpers() {
         XCTAssertEqual(USBSpeed.maximumSupported(bcdUSB: 0x0200), .high)
         XCTAssertEqual(USBSpeed.maximumSupported(bcdUSB: 0x0300), .superSpeed)
-        XCTAssertEqual(USBSpeed.maximumSupported(bcdUSB: 0x0320), .superSpeedPlus)
+        XCTAssertEqual(USBSpeed.maximumSupported(bcdUSB: 0x0320), .superSpeed, "bcdUSB 3.2 does not imply Gen 2")
         XCTAssertEqual(USBSpeed.maximumSupported(bcdUSB: 0x0110), .full)
         XCTAssertEqual(Hex.bcdVersion(0x0210), "2.10")
         XCTAssertEqual(Hex.bcdVersion(0x0101), "1.01")

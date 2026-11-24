@@ -1,0 +1,12 @@
+{
+  "schema": "hcg-app-packaging/1",
+  "description": "HCG System Tester.app is the SwiftPM product HCGSystemTester plus this Info.plist template and icon. No helpers or prebuild commands. scripts/build-app.sh is the reference implementation.",
+  "product": "HCGSystemTester",
+  "bundle": {
+    "displayName": "HCG System Tester",
+    "identifier": "com.hakmicapitalgroup.systemtester",
+    "infoPlist": "Packaging/Info.plist",
+    "icon": "Packaging/AppIcon.icns",
+    "minimumMacOS": "14.0"
+  }
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Development builds are not sandboxed so IOKit registry discovery works unrestricted.
+	     Discovery is read-only and needs no special entitlement. A sandboxed distribution
+	     build would add com.apple.security.app-sandbox together with com.apple.security.device.usb. -->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+</dict>
+</plist>

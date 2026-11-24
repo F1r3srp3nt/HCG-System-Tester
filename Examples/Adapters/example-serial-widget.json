@@ -1,0 +1,55 @@
+{
+  "schema": "hcg.adapter-manifest/1",
+  "id": "com.example.adapter.serial-widget",
+  "name": "Example Serial Widget",
+  "version": "1.0.0",
+  "publisher": "Example Labs",
+  "summary": "Identifies the Example Serial Widget (a CH340-based board) and runs host-side, read-only checks on it.",
+  "execution": "declarative",
+  "deviceFamilies": ["microcontroller", "robotics"],
+  "connectionTypes": ["usb"],
+  "protocols": ["usb.descriptor", "usb.vendor-serial"],
+  "match": { "vendorIDs": ["0x1A86"], "productIDs": ["0x7523"] },
+  "hardwareRequirements": ["Data-capable USB cable"],
+  "driverRequirements": [
+    { "name": "Apple CH34x DriverKit driver", "providedByMacOS": true, "notes": "Included in current macOS releases." }
+  ],
+  "permissions": ["readDeviceDescriptors", "readSerialPortList"],
+  "operations": [
+    { "id": "widget.presence", "name": "Presence", "hostOperation": "host.presence", "category": "connectionHealth",
+      "impact": "readOnly", "requiredCapabilities": [], "summary": "Confirms the widget is enumerated.", "timeoutSeconds": 10 },
+    { "id": "widget.serial-node", "name": "Serial node published", "hostOperation": "host.protocol-validation", "category": "protocolValidation",
+      "impact": "readOnly", "requiredCapabilities": ["descriptors"], "summary": "Checks that macOS published a /dev/cu.* node for the bridge.", "timeoutSeconds": 10 },
+    { "id": "widget.stability", "name": "Cable stability (60 s)", "hostOperation": "host.presence-stability-extended", "category": "connectionStability",
+      "impact": "extended", "requiredCapabilities": [], "summary": "Watches for drop-outs for one minute.",
+      "effects": "Runs for 60 seconds. Read-only; the widget is not touched.", "timeoutSeconds": 90 }
+  ],
+  "configuration": {
+    "fields": [
+      { "key": "baudRate", "label": "Baud rate (for the planned serial session)", "type": "integer", "required": false,
+        "defaultValue": "115200", "minimum": 300, "maximum": 3000000, "secret": false }
+    ]
+  },
+  "compatibility": { "platforms": ["macOS"], "minimumHostVersion": "0.1.0", "minimumOSVersion": "14.0" },
+  "lifecycle": { "stages": ["discover", "identify", "diagnose"], "requiresExplicitAuthorization": false, "closeOnDisconnect": true },
+  "errors": [
+    { "code": "serial.no-callout", "meaning": "No /dev/cu.* node was published.", "recovery": "Check the cable; older boards may need a vendor driver. System Tester never installs drivers." }
+  ],
+  "healthChecks": [ { "id": "widget.health", "hostOperation": "host.presence", "intervalSeconds": 15 } ],
+  "profiles": [
+    {
+      "id": "com.example.adapter.serial-widget.board",
+      "name": "Example Serial Widget",
+      "category": "microcontroller",
+      "family": "Example Labs boards",
+      "role": "usbDevice",
+      "match": { "vendorIDs": ["0x1A86"], "productIDs": ["0x7523"], "nameContains": ["Widget"] },
+      "exposedProtocols": ["usb.descriptor", "usb.vendor-serial"],
+      "recommendedAdapters": ["com.example.adapter.serial-widget"],
+      "knownLimitations": ["The CH340 bridge is identified; the firmware behind it is not."],
+      "notes": "",
+      "priority": 90
+    }
+  ],
+  "experimental": false
+}

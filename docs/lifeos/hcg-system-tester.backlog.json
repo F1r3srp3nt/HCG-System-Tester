@@ -1,0 +1,308 @@
+{
+  "format": "hcg.lifeos.backlog",
+  "schemaVersion": 2,
+  "source": "HCG System Tester repository (docs/lifeos). Proposed roadmap — no System Tester quest import existed in HCG-LifeOS when 0.1.0 was built. Import manually; nothing here awards XP.",
+  "expectedCounts": {
+    "Sovereign Technology": 14
+  },
+  "quests": [
+    {
+      "key": "hcg.systemtester.epic.platform",
+      "title": "HCG System Tester — modular hardware discovery & diagnostics platform",
+      "details": "Native macOS (Swift/SwiftUI) platform that discovers connected systems, explains exactly which connectivity layers are verified, and runs authorised read-only diagnostics through interchangeable adapters. Principle: EVERYTHING IS INTERCHANGEABLE.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "epic",
+      "category": "development",
+      "priority": "high",
+      "status": "inProgress",
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m1.acceptance",
+      "title": "Acceptance: connect a real USB device and see it in System Tester",
+      "details": "First acceptance milestone. Build 0.1.0 on the MacBook Pro (M4 Max) and confirm live detection of real hardware.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [],
+      "category": "development",
+      "priority": "critical",
+      "status": "ready",
+      "estimatedMinutes": 90,
+      "subtasks": [
+        "Build with Xcode (App/HCGSystemTester.xcodeproj) or scripts/build-app.sh",
+        "Run swift run hcg-probe --watch and plug/unplug a device",
+        "USB storage device: BSD disk + link speed shown",
+        "Smartphone (iPhone and/or Android): status Adapter required, not Connected",
+        "USB hub: children drawn behind the hub in the Visualizer",
+        "USB serial board: /dev/cu.* shown",
+        "Gaming controller: identified as controller, not console",
+        "PlayStation/Xbox console: record that host-to-host USB does not enumerate",
+        "Export a report and record compatibility evidence for every device"
+      ],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m1.core",
+      "title": "Core engine 0.1.0: identification, connectivity layers, adapter SDK, diagnostics",
+      "details": "Delivered in the initial commit; verify on hardware before closing.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [],
+      "category": "development",
+      "priority": "high",
+      "status": "inProgress",
+      "estimatedMinutes": 60,
+      "subtasks": [
+        "IOKit USB + Thunderbolt discovery with live notifications",
+        "Five-layer connectivity assessment",
+        "State machine (detected … disconnected)",
+        "Adapter manifest SDK + validator",
+        "Diagnostic engine with authorisation gate and audit log",
+        "Reports: Markdown, JSON, hcg.diagnostic-report/1"
+      ],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m2.serial",
+      "title": "Serial adapter: first verified functional communication",
+      "details": "Open a serial port read-only after explicit per-device authorisation; loopback/echo test to verify the Functional communication layer for the first time on real hardware.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m1.acceptance"
+      ],
+      "category": "development",
+      "priority": "high",
+      "status": "backlog",
+      "estimatedMinutes": 480,
+      "subtasks": [
+        "Privileged permission grant UI",
+        "Read-only open with termios configuration from the adapter schema",
+        "Loopback echo test with measured round-trip latency",
+        "Close-on-disconnect lifecycle"
+      ],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m3.network",
+      "title": "Network & Bluetooth discovery backends",
+      "details": "Local-network (DNS-SD/Bonjour, Network framework path monitoring) and Core Bluetooth discovery with the required macOS permissions.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m1.acceptance"
+      ],
+      "category": "development",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 720,
+      "subtasks": [
+        "NSLocalNetworkUsageDescription + documented service types only",
+        "Reachability/latency diagnostics to user-specified hosts",
+        "Core Bluetooth advertisement discovery (read-only)",
+        "Visualizer network group"
+      ],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m4.storage",
+      "title": "Storage health where supported",
+      "details": "SMART/health data via bridges that expose it through supported macOS APIs; otherwise report the limitation.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m1.acceptance"
+      ],
+      "category": "development",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 360,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m5.consoles",
+      "title": "PlayStation & Xbox research modules: documented interfaces only",
+      "details": "Record which interfaces consoles actually expose per connection role; investigate documented network services and authorised developer interfaces. No bypass of authentication, DRM or firmware protections.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m3.network"
+      ],
+      "category": "development",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 480,
+      "subtasks": [
+        "Physical test: Mac ↔ console USB (expected: no enumeration)",
+        "Controller diagnostics over USB and Bluetooth",
+        "Console network presence via documented discovery only",
+        "Compatibility report"
+      ],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m6.iot",
+      "title": "Smart appliance & IoT adapters (Matter, MQTT, manufacturer APIs)",
+      "details": "Read-only measurements and health from documented interfaces; explicit authorisation before any setting change; never safety-critical functions.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m3.network"
+      ],
+      "category": "development",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 900,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m7.server",
+      "title": "HCG Server: Device Link pairing and diagnostic result sync",
+      "details": "Implement hcg.devicelink/1 pairing (invitation code, P-256 installation key, pinned TLS 1.3) and share hcg.diagnostic-report/1 reports. No remote command execution.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m1.acceptance"
+      ],
+      "category": "development",
+      "priority": "high",
+      "status": "backlog",
+      "estimatedMinutes": 900,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m8.connect",
+      "title": "HCG Connect sign-in (after client registration)",
+      "details": "Register a System Tester client in HCG Connect, then add PKCE loopback sign-in. App stays usable locally without it.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m1.acceptance"
+      ],
+      "category": "development",
+      "priority": "medium",
+      "status": "blocked",
+      "estimatedMinutes": 360,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m9.nexus",
+      "title": "HCG Nexus: register System Tester in the Interchange Protocol",
+      "details": "Nexus HIP v1 registry is compiled into Nexus and iOS-only; add a System Tester entry (Nexus project change) using hcgsystemtester://open/<route> navigation.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [],
+      "category": "development",
+      "priority": "medium",
+      "status": "blocked",
+      "estimatedMinutes": 180,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m10.signal",
+      "title": "Shared hardware adapter spec with HCG Signal Contractor",
+      "details": "Propose hcg.adapter-manifest/1 as the shared adapter specification and exchange device identifiers/capabilities to avoid duplicate discovery stacks.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [],
+      "category": "development",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 240,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m11.sdk2",
+      "title": "Adapter SDK v2: signed adapter packages built with HCG Executable Maker",
+      "details": "Package approved adapter projects, signature verification before approval, version management across installs.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m2.serial"
+      ],
+      "category": "development",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 600,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    },
+    {
+      "key": "hcg.systemtester.m12.distribution",
+      "title": "Distribution build (manual publication only)",
+      "details": "Developer ID signing, hardened runtime, notarisation, DMG/pkg via HCG Executable Maker. Publication to HCG Store/GitHub Releases stays a manual founder decision.",
+      "realm": "Sovereign Technology",
+      "project": "HCG System Tester",
+      "kind": "quest",
+      "parent": "hcg.systemtester.epic.platform",
+      "dependsOn": [
+        "hcg.systemtester.m1.acceptance"
+      ],
+      "category": "operations",
+      "priority": "medium",
+      "status": "backlog",
+      "estimatedMinutes": 240,
+      "subtasks": [],
+      "tags": [
+        "HCG System Tester"
+      ]
+    }
+  ]
+}

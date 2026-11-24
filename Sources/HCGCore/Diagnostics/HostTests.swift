@@ -222,17 +222,18 @@ public struct LinkSpeedTest: DiagnosticTest {
         var summary = "Running at \(speed.displayName)."
         var next = "No action needed."
         if let max = usb.maximumSupportedSpeed, let bcd = usb.usbSpecification {
-            measurements.append(ctx.measurement("Declared maximum link rate", max.megabitsPerSecond, "Mbit/s"))
-            evidence.append("Device declares USB \(bcd) (up to \(max.displayName))")
+            measurements.append(ctx.measurement("Declared minimum capability", max.megabitsPerSecond, "Mbit/s"))
+            evidence.append("Device declares USB \(bcd) (guarantees at least \(max.displayName))")
             if speed.rawValue < max.rawValue && max.rawValue >= USBSpeed.superSpeed.rawValue {
                 outcome = .warning
-                summary = "Running at \(speed.shortName), below the \(max.shortName) the device declares."
+                summary = "Running at \(speed.shortName), below the SuperSpeed (USB 3) link the device supports."
                 next = "Use a USB 3 / USB-C data cable rated for the speed, connect directly to the Mac (not through a USB 2 hub), and re-test."
             }
         }
         return DiagnosticTestOutput(
             outcome: outcome, summary: summary, measurements: measurements, evidence: evidence,
-            limitations: ["This is the negotiated signalling rate, not measured throughput. Throughput testing needs a protocol adapter."],
+            limitations: ["This is the negotiated signalling rate, not measured throughput. Throughput testing needs a protocol adapter.",
+                          "Gen 2 (10 Gbit/s) capability is not published by macOS, so a Gen 2 device on a Gen 1 link is not flagged."],
             recommendedNextAction: next)
     }
 }

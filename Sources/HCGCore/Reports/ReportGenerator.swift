@@ -93,7 +93,7 @@ public enum ReportGenerator {
 
     public static func json(_ report: SystemTesterReport) throws -> Data {
         let e = JSONEncoder()
-        e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         e.dateEncodingStrategy = .iso8601
         return try e.encode(report)
     }
@@ -267,7 +267,7 @@ public struct DeviceLinkDiagnosticReport: Codable, Hashable {
 
     public func encoded() throws -> Data {
         let e = JSONEncoder()
-        e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         e.dateEncodingStrategy = .iso8601
         return try e.encode(self)
     }

@@ -65,12 +65,14 @@ public enum USBSpeed: Int, Codable, CaseIterable, Hashable {
         }
     }
 
-    /// Highest speed a device can support according to its `bcdUSB` specification release.
+    /// The speed class a device's `bcdUSB` release guarantees it can reach.
+    ///
+    /// bcdUSB ≥ 3.00 only guarantees SuperSpeed (5 Gbit/s): USB 3.1/3.2 releases also cover Gen 1
+    /// devices, and Gen 2 capability is only declared in the BOS descriptor, which macOS does not publish
+    /// in the registry. Claiming more would produce false "slow link" warnings.
     public static func maximumSupported(bcdUSB: UInt16) -> USBSpeed {
         switch bcdUSB {
-        case 0x0320...: return .superSpeedPlus
-        case 0x0310..<0x0320: return .superSpeedPlus
-        case 0x0300..<0x0310: return .superSpeed
+        case 0x0300...: return .superSpeed
         case 0x0200..<0x0300: return .high
         default: return .full
         }

@@ -31,6 +31,7 @@ jobs:
           swift --version
 
       - name: Build package (debug)
+        id: build
         run: swift build 2>&1 | tee build.log
 
       - name: Summarise compiler errors
@@ -45,18 +46,22 @@ jobs:
         run: grep -E "error:|failed|XCTAssert" test.log | sed -E 's#^.*/HCG-System-Tester/##' | sort -u | head -n 120
 
       - name: Probe real hardware of the runner (read-only)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           swift run hcg-probe
           swift run hcg-probe --json > probe.json && head -c 2000 probe.json
 
       - name: Diagnose synthetic fixtures
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: swift run hcg-probe --synthetic --diagnose
 
       - name: Build release app bundle (unsigned check)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           if [ -x scripts/build-app.sh ]; then scripts/build-app.sh --configuration release --no-sign; fi
 
       - name: Build Xcode project
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           if [ -d App/HCGSystemTester.xcodeproj ]; then
             xcodebuild -project App/HCGSystemTester.xcodeproj -scheme HCGSystemTester -configuration Debug \

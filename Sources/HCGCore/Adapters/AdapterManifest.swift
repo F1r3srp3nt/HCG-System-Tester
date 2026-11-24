@@ -346,7 +346,7 @@ public struct AdapterManifest: Codable, Hashable, Identifiable {
 
     public func encoded() throws -> Data {
         let e = JSONEncoder()
-        e.outputFormatting = [.prettyPrinted, .sortedKeys]
+        e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return try e.encode(self)
     }
 }

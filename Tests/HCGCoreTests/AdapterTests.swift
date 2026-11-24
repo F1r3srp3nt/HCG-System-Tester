@@ -135,3 +135,20 @@ final class AdapterTests: XCTestCase {
         XCTAssertFalse(store.isDeviceAuthorized(key))
     }
 }
+
+final class ExampleManifestTests: XCTestCase {
+    /// The shipped SDK example must always import cleanly.
+    func testShippedExampleManifestIsValid() throws {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Examples/Adapters/example-serial-widget.json")
+        let manifest = try AdapterManifest.decode(Data(contentsOf: url))
+        let errors = ManifestValidator.validate(manifest, origin: .imported).filter { $0.severity == .error }
+        XCTAssertTrue(errors.isEmpty, "\(errors)")
+        XCTAssertEqual(manifest.profiles.first?.match.vendorIDs, [0x1A86])
+        let registry = AdapterRegistry()
+        let entry = try registry.register(manifest, origin: .imported)
+        XCTAssertEqual(entry.trust, .untrusted)
+        XCTAssertFalse(entry.enabled)
+    }
+}
