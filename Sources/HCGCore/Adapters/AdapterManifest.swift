@@ -350,3 +350,39 @@ public struct AdapterManifest: Codable, Hashable, Identifiable {
         return try e.encode(self)
     }
 }
+
+extension AdapterManifest {
+    enum CodingKeys: String, CodingKey {
+        case schema, id, name, version, publisher, summary, execution, deviceFamilies, connectionTypes, protocols, match
+        case hardwareRequirements, driverRequirements, permissions, operations, configuration, compatibility, lifecycle
+        case errors, healthChecks, profiles, experimental
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            schema: try c.decode(String.self, forKey: .schema),
+            id: try c.decode(String.self, forKey: .id),
+            name: try c.decode(String.self, forKey: .name),
+            version: try c.decode(SemanticVersion.self, forKey: .version),
+            publisher: try c.decode(String.self, forKey: .publisher),
+            summary: try c.decodeIfPresent(String.self, forKey: .summary) ?? "",
+            execution: try c.decodeIfPresent(AdapterExecutionModel.self, forKey: .execution) ?? .declarative,
+            deviceFamilies: try c.decodeIfPresent([DeviceCategory].self, forKey: .deviceFamilies) ?? [],
+            connectionTypes: try c.decodeIfPresent([ConnectionType].self, forKey: .connectionTypes) ?? [],
+            protocols: try c.decodeIfPresent([String].self, forKey: .protocols) ?? [],
+            match: try c.decodeIfPresent(DeviceMatchRules.self, forKey: .match) ?? DeviceMatchRules(),
+            hardwareRequirements: try c.decodeIfPresent([String].self, forKey: .hardwareRequirements) ?? [],
+            driverRequirements: try c.decodeIfPresent([DriverRequirement].self, forKey: .driverRequirements) ?? [],
+            permissions: try c.decodeIfPresent([AdapterPermission].self, forKey: .permissions) ?? [],
+            operations: try c.decodeIfPresent([DiagnosticOperationDescriptor].self, forKey: .operations) ?? [],
+            configuration: try c.decodeIfPresent(ConfigurationSchema.self, forKey: .configuration) ?? ConfigurationSchema(),
+            compatibility: try c.decodeIfPresent(CompatibilityRequirements.self, forKey: .compatibility) ?? CompatibilityRequirements(),
+            lifecycle: try c.decodeIfPresent(ConnectionLifecycle.self, forKey: .lifecycle) ?? ConnectionLifecycle(),
+            errors: try c.decodeIfPresent([AdapterErrorDescriptor].self, forKey: .errors) ?? [],
+            healthChecks: try c.decodeIfPresent([HealthCheckDescriptor].self, forKey: .healthChecks) ?? [],
+            profiles: try c.decodeIfPresent([DeviceProfile].self, forKey: .profiles) ?? [],
+            experimental: try c.decodeIfPresent(Bool.self, forKey: .experimental) ?? false
+        )
+    }
+}

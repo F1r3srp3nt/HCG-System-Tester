@@ -1,0 +1,53 @@
+name: macOS build & test
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Build package (debug)
+        run: swift build 2>&1 | tee build.log
+
+      - name: Test package
+        run: swift test 2>&1 | tee test.log
+
+      - name: Probe real hardware of the runner (read-only)
+        run: |
+          swift run hcg-probe
+          swift run hcg-probe --json > probe.json && head -c 2000 probe.json
+
+      - name: Diagnose synthetic fixtures
+        run: swift run hcg-probe --synthetic --diagnose
+
+      - name: Build release app bundle (unsigned check)
+        run: |
+          if [ -x scripts/build-app.sh ]; then scripts/build-app.sh --configuration release --no-sign; fi
+
+      - name: Build Xcode project
+        run: |
+          if [ -d App/HCGSystemTester.xcodeproj ]; then
+            xcodebuild -project App/HCGSystemTester.xcodeproj -scheme HCGSystemTester -configuration Debug \
+              -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" build | tail -n 60
+            exit ${PIPESTATUS[0]}
+          fi

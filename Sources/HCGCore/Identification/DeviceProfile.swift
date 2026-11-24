@@ -188,3 +188,60 @@ public struct IdentificationResult: Codable, Hashable {
                              alternatives: [])
     }
 }
+
+/// Accepts identifiers written as JSON numbers or as hexadecimal strings ("0x054C").
+struct FlexibleHexInteger<T: FixedWidthInteger & Codable>: Codable {
+    var value: T
+
+    init(_ value: T) { self.value = value }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let n = try? c.decode(T.self) {
+            value = n
+            return
+        }
+        let s = try c.decode(String.self).trimmingCharacters(in: .whitespaces).lowercased()
+        let digits = s.hasPrefix("0x") ? String(s.dropFirst(2)) : s
+        guard let n = T(digits, radix: 16) else {
+            throw DecodingError.dataCorruptedError(in: c, debugDescription: "\"\(s)\" is not a hexadecimal identifier")
+        }
+        value = n
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode("0x" + Hex.pad(UInt64(value), digits: T.bitWidth / 4))
+    }
+}
+
+extension DeviceMatchRules {
+    enum CodingKeys: String, CodingKey {
+        case vendorIDs, productIDs, deviceClasses, interfaceClasses, interfaceTriples, nameContains, connectionTypes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            vendorIDs: (try c.decodeIfPresent([FlexibleHexInteger<UInt16>].self, forKey: .vendorIDs) ?? []).map(\.value),
+            productIDs: (try c.decodeIfPresent([FlexibleHexInteger<UInt16>].self, forKey: .productIDs) ?? []).map(\.value),
+            deviceClasses: (try c.decodeIfPresent([FlexibleHexInteger<UInt8>].self, forKey: .deviceClasses) ?? []).map(\.value),
+            interfaceClasses: (try c.decodeIfPresent([FlexibleHexInteger<UInt8>].self, forKey: .interfaceClasses) ?? []).map(\.value),
+            interfaceTriples: try c.decodeIfPresent([String].self, forKey: .interfaceTriples) ?? [],
+            nameContains: try c.decodeIfPresent([String].self, forKey: .nameContains) ?? [],
+            connectionTypes: try c.decodeIfPresent([ConnectionType].self, forKey: .connectionTypes) ?? []
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        if !vendorIDs.isEmpty { try c.encode(vendorIDs.map { FlexibleHexInteger($0) }, forKey: .vendorIDs) }
+        if !productIDs.isEmpty { try c.encode(productIDs.map { FlexibleHexInteger($0) }, forKey: .productIDs) }
+        if !deviceClasses.isEmpty { try c.encode(deviceClasses.map { FlexibleHexInteger($0) }, forKey: .deviceClasses) }
+        if !interfaceClasses.isEmpty { try c.encode(interfaceClasses.map { FlexibleHexInteger($0) }, forKey: .interfaceClasses) }
+        if !interfaceTriples.isEmpty { try c.encode(interfaceTriples, forKey: .interfaceTriples) }
+        if !nameContains.isEmpty { try c.encode(nameContains, forKey: .nameContains) }
+        if !connectionTypes.isEmpty { try c.encode(connectionTypes, forKey: .connectionTypes) }
+    }
+}
+
