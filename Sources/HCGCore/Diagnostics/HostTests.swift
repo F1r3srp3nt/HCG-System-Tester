@@ -154,8 +154,9 @@ public struct ProtocolValidationTest: DiagnosticTest {
         return DiagnosticTestOutput(
             outcome: problems.isEmpty ? .passed : .warning,
             summary: problems.isEmpty ? "Every checked interface has its expected OS service." : "\(problems.count) interface(s) lack their expected OS service.",
-            evidence: evidence, errors: problems,
+            evidence: evidence,
             limitations: ["Validates that the OS bound the protocol; does not exchange data with the device."],
+            errors: problems,
             recommendedNextAction: problems.isEmpty ? "No action needed." : "A vendor driver may be required, or the device firmware may be in a non-standard mode. System Tester never installs drivers.")
     }
 }
