@@ -6,7 +6,7 @@ import HCGCore
 import HCGHardware
 
 enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
-    case commandCenter, connectedSystems, visualizer, diagnostics, laboratory, adapterLibrary, developerStudio, ecosystem, reports, settings
+    case commandCenter, connectedSystems, liveMonitor, visualizer, usbInspector, diagnostics, laboratory, adapterLibrary, developerStudio, ecosystem, reports, settings
 
     var id: String { rawValue }
 
@@ -14,7 +14,9 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .commandCenter: return "Command Center"
         case .connectedSystems: return "Connected Systems"
+        case .liveMonitor: return "Live Device Monitor"
         case .visualizer: return "Connection Visualizer"
+        case .usbInspector: return "USB Connection Inspector"
         case .diagnostics: return "Diagnostics"
         case .laboratory: return "Device Laboratory"
         case .adapterLibrary: return "Adapter Library"
@@ -29,7 +31,9 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .commandCenter: return "square.grid.3x3.topleft.filled"
         case .connectedSystems: return "cable.connector.horizontal"
+        case .liveMonitor: return "waveform.path.ecg"
         case .visualizer: return "point.3.connected.trianglepath.dotted"
+        case .usbInspector: return "magnifyingglass.circle"
         case .diagnostics: return "waveform.path.ecg.rectangle"
         case .laboratory: return "flask"
         case .adapterLibrary: return "puzzlepiece.extension"
@@ -44,7 +48,9 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .commandCenter: return "1"
         case .connectedSystems: return "2"
+        case .liveMonitor: return "l"
         case .visualizer: return "3"
+        case .usbInspector: return "u"
         case .diagnostics: return "4"
         case .laboratory: return "5"
         case .adapterLibrary: return "6"
@@ -55,11 +61,17 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    var shortcutModifiers: EventModifiers {
+        self == .liveMonitor || self == .usbInspector ? [.command, .option] : .command
+    }
+
     var route: SystemTesterRoute {
         switch self {
         case .commandCenter: return .commandCenter
         case .connectedSystems: return .connectedSystems
+        case .liveMonitor: return .liveMonitor
         case .visualizer: return .visualizer
+        case .usbInspector: return .usbInspector
         case .diagnostics: return .diagnostics
         case .laboratory: return .laboratory
         case .adapterLibrary: return .adapterLibrary
@@ -72,6 +84,23 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
 
     init(route: SystemTesterRoute) {
         self = WorkspaceSection.allCases.first { $0.route == route } ?? .commandCenter
+    }
+}
+
+enum DeviceWorkspaceTab: String, CaseIterable, Identifiable, Hashable {
+    case overview, hardware, software, diagnostics, authorization, activity, reports
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+    var symbol: String {
+        switch self {
+        case .overview: return "rectangle.on.rectangle"
+        case .hardware: return "cpu"
+        case .software: return "app.badge"
+        case .diagnostics: return "stethoscope"
+        case .authorization: return "lock.shield"
+        case .activity: return "clock.arrow.circlepath"
+        case .reports: return "doc.text"
+        }
     }
 }
 
@@ -115,6 +144,13 @@ final class AppModel: ObservableObject {
         }
     }
     @Published var newDevicePulse: DeviceIdentifier?
+    @Published var workspaceTab: DeviceWorkspaceTab = .overview
+    @Published private(set) var intelligenceRevision = 0
+    @Published private(set) var monitorRevision = 0
+    @Published private(set) var toolchain: AppleToolchainStatus?
+    @Published private(set) var busyIntelligence: Set<DeviceIdentifier> = []
+    @Published private(set) var appleApps: [DeviceIdentifier: [AppleAppInfo]] = [:]
+    @Published var monitorPaused = false
 
     let host = HostInfo.current()
     let identification: IdentificationEngine
@@ -124,6 +160,14 @@ final class AppModel: ObservableObject {
     let laboratory: DeviceLaboratory
     let auditLog: AuditLog
     let engine: DiagnosticEngine
+    let intelligence: DeviceIntelligenceEngine
+    let appleProvider: AppleDeviceIntelligenceProvider
+    let syntheticAppleProvider: AppleDeviceIntelligenceProvider
+    let liveMonitor = LiveMonitor()
+    private var intelligenceTasks: [DeviceIdentifier: Task<Void, Never>] = [:]
+    private var lastIntelligenceRefresh: [DeviceIdentifier: Date] = [:]
+    private var lastCoreDeviceSample: [String: Date] = [:]
+    private var monitorTask: Task<Void, Never>?
     private var hardwareBackends: [DeviceDiscoveryBackend] = []
     private let syntheticBackend = SyntheticDiscoveryBackend()
     private var started = false
@@ -143,7 +187,13 @@ final class AppModel: ObservableObject {
         inventory = DeviceInventory(identification: ident, adapters: registry, authorization: authStore, keySalt: s.fingerprintSalt)
         laboratory = DeviceLaboratory(fileURL: AppPaths.laboratoryFile)
         auditLog = audit
-        engine = DiagnosticEngine(auditLog: audit, redactor: Redactor(settings: s.privacy))
+        let apple = AppleDeviceIntelligenceProvider(runner: ProcessCommandRunner(), provenance: .hardware)
+        let appleFixture = AppleDeviceIntelligenceProvider(runner: SyntheticAppleRunner(paired: false), provenance: .synthetic)
+        appleProvider = apple
+        syntheticAppleProvider = appleFixture
+        intelligence = DeviceIntelligenceEngine(providers: [apple, appleFixture, GenericUSBIntelligenceProvider()])
+        engine = DiagnosticEngine(tests: HostOperationCatalog.standardTests() + AppleDiagnostics.tests(providers: [apple, appleFixture]),
+                                  auditLog: audit, redactor: Redactor(settings: s.privacy))
         loadStoredAdapters()
         inventory.reevaluateAll()
         adapters = adapterRegistry.adapters
@@ -154,6 +204,9 @@ final class AppModel: ObservableObject {
         laboratory.onChange = { [weak self] in
             Task { @MainActor in self?.labRevision += 1 }
         }
+        let engineRef = intelligence
+        apple.timelineProvider = { key in engineRef.timeline(key: key) }
+        appleFixture.timelineProvider = { key in engineRef.timeline(key: key) }
     }
 
     // MARK: Discovery
@@ -164,6 +217,8 @@ final class AppModel: ObservableObject {
         if settings.hardwareDiscoveryEnabled { startHardware() }
         if settings.syntheticFixturesEnabled { startSynthetic() }
         refreshPublishedState()
+        Task { @MainActor in self.toolchain = await self.appleProvider.toolchain() }
+        startMonitor()
     }
 
     private func startHardware() {
@@ -223,9 +278,26 @@ final class AppModel: ObservableObject {
     }
 
     private func handle(_ event: DiscoveryEvent) {
+        let lastBefore = inventory.events.last?.id
         inventory.apply(event)
+        let newEvents: [InventoryEvent] = {
+            guard let lb = lastBefore, let i = inventory.events.lastIndex(where: { $0.id == lb }) else { return inventory.events }
+            return Array(inventory.events[(i + 1)...])
+        }()
         switch event {
         case .attached(let d):
+            if let r = inventory.record(d.id) {
+                let isNew = newEvents.contains { $0.deviceID == d.id && ($0.kind == .attached || $0.kind == .reattached) }
+                if isNew {
+                    let kind: IntelligenceTimelineEntry.Kind = newEvents.contains { $0.kind == .reattached } ? .reconnect : .connect
+                    intelligence.append(IntelligenceTimelineEntry(kind: kind, message: kind == .reconnect ? "Reconnected; re-identifying." : "Connected: \(d.source).",
+                                                                  provenance: d.provenance), key: r.stableKey)
+                    liveMonitor.connected(key: r.stableKey)
+                }
+                // Apple devices publish their services a moment after enumeration; let IOKit settle first.
+                let isApple = AppleDeviceIntelligenceProvider.isAppleMobileDevice(d)
+                scheduleIntelligence(d.id, delay: isApple ? (isNew ? 1.5 : 0.8) : 0)
+            }
             // IOKit re-reads a new device a few times while drivers attach; log the attachment once.
             if let r = inventory.record(d.id), settings.recordConnectionsInLaboratory {
                 let last = laboratory.profile(r.stableKey)?.history.last
@@ -233,8 +305,13 @@ final class AppModel: ObservableObject {
             }
             if d.provenance == .hardware { newDevicePulse = d.id }
         case .detached(let id, _):
-            if let r = inventory.record(id), settings.recordConnectionsInLaboratory {
-                laboratory.observe(r, event: "Detached")
+            intelligenceTasks[id]?.cancel()
+            intelligenceTasks[id] = nil
+            if let r = inventory.record(id) {
+                if settings.recordConnectionsInLaboratory { laboratory.observe(r, event: "Detached") }
+                intelligence.markDisconnected(id, key: r.stableKey)
+                liveMonitor.disconnected(key: r.stableKey)
+                intelligenceRevision += 1
             }
             if let run = activeRuns[id] { banner = "\(run.deviceName) disconnected during diagnostics." }
         case .backendStatus:
@@ -273,6 +350,134 @@ final class AppModel: ObservableObject {
     func probe(for device: DiscoveredDevice) -> DeviceProbe? {
         if device.provenance.isSynthetic { return syntheticBackend }
         return hardwareBackends.first { $0.connectionTypes.contains(device.connectionType) }
+    }
+
+    // MARK: Device intelligence
+
+    func snapshot(_ id: DeviceIdentifier) -> IntelligenceSnapshot? {
+        _ = intelligenceRevision
+        return intelligence.snapshots[id]
+    }
+
+    func timeline(for record: DeviceRecord) -> [IntelligenceTimelineEntry] {
+        _ = intelligenceRevision
+        return intelligence.timeline(key: record.stableKey)
+    }
+
+    func provider(for record: DeviceRecord) -> DeviceIntelligenceProvider? {
+        intelligence.provider(for: record.device, identification: record.identification)
+    }
+
+    func appleProvider(for record: DeviceRecord) -> AppleDeviceIntelligenceProvider? {
+        provider(for: record) as? AppleDeviceIntelligenceProvider
+    }
+
+    func scheduleIntelligence(_ id: DeviceIdentifier, delay: TimeInterval, force: Bool = false) {
+        intelligenceTasks[id]?.cancel()
+        intelligenceTasks[id] = Task { @MainActor [weak self] in
+            if delay > 0 { try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+            guard !Task.isCancelled else { return }
+            await self?.refreshIntelligence(id, force: force)
+        }
+    }
+
+    /// Re-reads the device through its family adapter. Never starts pairing and never prompts the device.
+    func refreshIntelligence(_ id: DeviceIdentifier, force: Bool = false) async {
+        guard let r = inventory.record(id), r.device.isPresent, let p = provider(for: r) else { return }
+        if force, let apple = p as? AppleDeviceIntelligenceProvider { apple.invalidateCaches() }
+        busyIntelligence.insert(id)
+        let snap = await p.snapshot(for: r.device, identification: r.identification)
+        busyIntelligence.remove(id)
+        guard let current = inventory.record(id), current.device.isPresent else { return }
+        intelligence.record(snap, key: current.stableKey)
+        lastIntelligenceRefresh[id] = Date()
+        inventory.applyIntelligence(id, communication: snap.communicationEvidence, authorization: snap.authorizationEvidence)
+        intelligenceRevision += 1
+        refreshPublishedState()
+    }
+
+    func refreshToolchain() {
+        Task { @MainActor in
+            self.toolchain = await self.appleProvider.toolchain(forceRefresh: true)
+            for r in self.presentRecords where AppleDeviceIntelligenceProvider.isAppleMobileDevice(r.device) {
+                await self.refreshIntelligence(r.id, force: true)
+            }
+        }
+    }
+
+    /// Runs a user-approved action (e.g. Apple's pairing flow) and records it.
+    func performIntelligenceAction(_ kind: NextActionKind, on record: DeviceRecord) {
+        guard let p = provider(for: record) else { return }
+        busyIntelligence.insert(record.id)
+        auditLog.record(AuditEntry(actor: "user", operation: "intelligence.\(kind.rawValue)", impact: kind == .pairDevice ? .stateChanging : .readOnly,
+                                   target: engine.redactor.redact(record.device.displayName), targetKey: record.stableKey,
+                                   decision: "user-initiated", outcome: "started", provenance: record.device.provenance))
+        Task { @MainActor in
+            let outcome = await p.perform(kind, for: record.device, identification: record.identification)
+            self.busyIntelligence.remove(record.id)
+            self.intelligence.append(IntelligenceTimelineEntry(kind: .action, message: "\(kind.rawValue): \(outcome.message)", provenance: record.device.provenance),
+                                     key: record.stableKey)
+            self.banner = outcome.message
+            await self.refreshIntelligence(record.id, force: true)
+        }
+    }
+
+    func loadApps(for record: DeviceRecord) {
+        guard let apple = appleProvider(for: record), let id = snapshot(record.id)?.value("apple.coreDeviceIdentifier") else {
+            banner = "Installed-app information needs a paired device visible to CoreDevice."
+            return
+        }
+        busyIntelligence.insert(record.id)
+        auditLog.record(AuditEntry(actor: "user", operation: "apple.list-apps", impact: .readOnly, target: engine.redactor.redact(record.device.displayName),
+                                   targetKey: record.stableKey, decision: "user-initiated", outcome: "started", provenance: record.device.provenance))
+        Task { @MainActor in
+            let result = await apple.installedApps(identifier: id)
+            self.busyIntelligence.remove(record.id)
+            if let e = result.error { self.banner = "Could not list apps: \(e)" }
+            self.appleApps[record.id] = result.apps.map { AppleAppInfo(name: $0.name, bundleID: $0.bundleID, version: $0.version) }
+        }
+    }
+
+    // MARK: Live Device Monitor
+
+    private func startMonitor() {
+        monitorTask?.cancel()
+        monitorTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self = self else { return }
+                if self.settings.monitorEnabled && !self.monitorPaused { await self.monitorTick() }
+                let interval = max(1, self.settings.monitorIntervalSeconds)
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+            }
+        }
+    }
+
+    private func monitorTick() async {
+        for r in presentRecords {
+            guard let probe = probe(for: r.device) else { continue }
+            let id = r.device.id
+            let measured = await Task.detached { () -> (Bool, Double) in
+                let t0 = DispatchTime.now().uptimeNanoseconds
+                let present = probe.refresh(id) != nil
+                return (present, Double(DispatchTime.now().uptimeNanoseconds - t0) / 1_000_000)
+            }.value
+            let source = r.device.provenance.isSynthetic ? "SYNTHETIC fixture re-read" : "IOKit registry re-read"
+            liveMonitor.record(MonitorSample(present: measured.0, latencyMs: measured.1, source: source, provenance: r.device.provenance), key: r.stableKey)
+
+            guard let apple = appleProvider(for: r), let snap = intelligence.snapshots[r.id] else { continue }
+            if settings.autoRefreshIntelligence, Date().timeIntervalSince(lastIntelligenceRefresh[r.id] ?? .distantPast) > settings.intelligenceRefreshSeconds {
+                await refreshIntelligence(r.id)
+            }
+            if settings.monitorCoreDevice, !snap.communicationEvidence.isEmpty, let cdID = snap.value("apple.coreDeviceIdentifier"),
+               Date().timeIntervalSince(lastCoreDeviceSample[r.stableKey] ?? .distantPast) >= max(15, settings.coreDeviceIntervalSeconds) {
+                lastCoreDeviceSample[r.stableKey] = Date()
+                let m = await apple.measureQueryLatency(identifier: cdID)
+                liveMonitor.record(MonitorSample(present: m.ms != nil, latencyMs: m.ms,
+                                                 source: apple.provenance == .synthetic ? "SYNTHETIC devicectl fixture" : "devicectl device info details",
+                                                 provenance: r.device.provenance), key: r.stableKey)
+            }
+        }
+        monitorRevision += 1
     }
 
     // MARK: Authorisation
@@ -440,6 +645,24 @@ final class AppModel: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
+    func exportInventorySnapshot() throws -> Data {
+        var r = Redactor(settings: settings.privacy)
+        r.registerHostName(host.name)
+        let snap = DeviceInventorySnapshot.make(records: records, snapshots: intelligence.snapshots, installationID: settings.installationID, redactor: r)
+        let e = JSONEncoder()
+        e.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        e.dateEncodingStrategy = .iso8601
+        return try e.encode(snap)
+    }
+
+    func exportSentinelFindings() throws -> Data {
+        var r = Redactor(settings: settings.privacy)
+        r.registerHostName(host.name)
+        let report = ConnectionSecurityFindings.report(records: records, snapshots: intelligence.snapshots, adapters: adapterRegistry.adapters,
+                                                       installationID: settings.installationID, deviceName: r.redact(host.name), redactor: r)
+        return try report.encoded()
+    }
+
     func handleIncoming(_ url: URL) {
         guard let route = SystemTesterRoute.parse(url) else {
             banner = "Ignored an unsupported link. System Tester accepts navigation links only."
@@ -454,5 +677,14 @@ final class AppModel: ObservableObject {
         guard let s = serial else { return "Not reported" }
         return settings.privacy.hideSerialNumbersInInterface ? Redactor.maskSerial(s) : s
     }
+}
+#endif
+
+#if os(macOS)
+struct AppleAppInfo: Identifiable, Hashable {
+    var name: String
+    var bundleID: String
+    var version: String?
+    var id: String { bundleID }
 }
 #endif

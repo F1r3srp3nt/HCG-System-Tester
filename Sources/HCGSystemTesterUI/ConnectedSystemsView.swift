@@ -84,24 +84,49 @@ struct DeviceDetailView: View {
     let record: DeviceRecord
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 16) {
             DeviceHeader(record: record)
-            ConnectivityLayersPanel(record: record)
+            Picker("Workspace", selection: $model.workspaceTab) {
+                ForEach(DeviceWorkspaceTab.allCases) { tab in
+                    Label(tab.title, systemImage: tab.symbol).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .accessibilityLabel("Device workspace section")
+            tabContent
+        }
+        .workspacePage()
+    }
+
+    @ViewBuilder var tabContent: some View {
+        switch model.workspaceTab {
+        case .overview:
+            DeviceOverviewTab(record: record)
+        case .hardware:
+            IntelligenceFieldsPanel(record: record, groups: [.hardware, .connection], title: "Hardware & connection")
             HStack(alignment: .top, spacing: 18) {
                 IdentityPanel(record: record).frame(maxWidth: .infinity)
                 IdentificationPanel(record: record).frame(maxWidth: .infinity)
             }
-            if let usb = record.device.usb {
-                InterfacesPanel(usb: usb)
-            }
-            if let tb = record.device.thunderbolt {
-                ThunderboltPanel(tb: tb)
-            }
+            if let usb = record.device.usb { InterfacesPanel(usb: usb) }
+            if let tb = record.device.thunderbolt { ThunderboltPanel(tb: tb) }
+            RawEvidencePanel(record: record)
+        case .software:
+            IntelligenceFieldsPanel(record: record, groups: [.software, .developer], title: "Software & developer capabilities")
+            ApplicationsPanel(record: record)
+        case .diagnostics:
+            DeviceDiagnosticsTab(record: record)
+        case .authorization:
+            AuthorizationTab(record: record)
+            ConnectivityLayersPanel(record: record)
             AdaptersPanel(record: record)
             DeviceActionsPanel(record: record)
-            RawEvidencePanel(record: record)
+        case .activity:
+            DeviceActivityTab(record: record)
+        case .reports:
+            DeviceReportsTab(record: record)
         }
-        .workspacePage()
     }
 }
 

@@ -43,6 +43,28 @@ final class StudioStore: ObservableObject {
         return p
     }
 
+    /// Copies the Apple Device Intelligence Adapter (first-party reference implementation) into an
+    /// editable, declarative project. The copy uses example IDs and runs host operations only.
+    @discardableResult
+    func loadAppleReference() -> StudioProject {
+        var m = BuiltInAdapters.appleDeviceIntelligence
+        m.id = "com.example.adapter.apple-reference"
+        m.name = "Apple Device Intelligence (reference copy)"
+        m.publisher = "Your name"
+        m.execution = .declarative
+        m.version = SemanticVersion(0, 1, 0)
+        m.profiles = [DeviceProfile(id: "com.example.adapter.apple-reference.iphone", name: "iPhone (reference profile)", category: .smartphone,
+                                    family: "Apple mobile devices", match: DeviceMatchRules(vendorIDs: [0x05AC], nameContains: ["iPhone"]),
+                                    exposedProtocols: ["usb.descriptor", "apple.usbmux", "apple.coredevice"],
+                                    recommendedAdapters: ["com.example.adapter.apple-reference"],
+                                    knownLimitations: ["Live information requires pairing (Trust This Computer)."], priority: 85)]
+        var p = StudioProject(manifest: m)
+        p.log.append(stamp("Loaded the Apple Device Intelligence Adapter as a reference (declarative copy; see docs/APPLE-ADAPTER.md)."))
+        projects.insert(p, at: 0)
+        save()
+        return p
+    }
+
     func update(_ p: StudioProject) {
         guard let i = projects.firstIndex(where: { $0.id == p.id }) else { return }
         var copy = p
@@ -81,6 +103,8 @@ struct DeveloperStudioView: View {
                         }
                     }
                     Button { importing = true } label: { Label("Import manifest into Studio…", systemImage: "square.and.arrow.down") }
+                        .buttonStyle(.link)
+                    Button { selection = store.loadAppleReference().id } label: { Label("Load reference: Apple Device Intelligence", systemImage: "apple.logo") }
                         .buttonStyle(.link)
                     Divider().opacity(0.2)
                     if store.projects.isEmpty {
@@ -137,6 +161,7 @@ struct DeveloperStudioView: View {
 private enum StudioTab: String, CaseIterable, Identifiable {
     case manifest = "Manifest"
     case profiles = "Device profiles"
+    case fixtures = "Fixtures"
     case json = "JSON"
     case test = "Test & validate"
     var id: String { rawValue }
@@ -182,6 +207,7 @@ private struct StudioEditor: View {
             switch tab {
             case .manifest: ManifestForm(manifest: $project.manifest)
             case .profiles: ProfileEditor(manifest: $project.manifest)
+            case .fixtures: FixtureEditor(manifest: project.manifest)
             case .json: jsonEditor
             case .test: testPanel
             }
@@ -442,6 +468,65 @@ private struct ProfileEditor: View {
                     exposedProtocols: manifest.protocols, recommendedAdapters: [manifest.id],
                     knownLimitations: limitation.isEmpty ? [] : [limitation], priority: 85))
                 name = ""; vendor = ""; product = ""; limitation = ""
+            }
+        }
+    }
+}
+
+/// Builds a labelled synthetic device from typed descriptors and evaluates identification and this
+/// adapter's match rules against it. Nothing is executed; fixtures never reach hardware discovery.
+private struct FixtureEditor: View {
+    @EnvironmentObject var model: AppModel
+    let manifest: AdapterManifest
+    @State private var name = "Prototype device"
+    @State private var vendor = "0x05AC"
+    @State private var product = "0x12A8"
+    @State private var triples = "06.01.01, FF.FE.02"
+    @State private var speed: USBSpeed = .high
+
+    var fixture: DiscoveredDevice? {
+        guard let v = Hex.parse16(vendor), let p = Hex.parse16(product) else { return nil }
+        let interfaces = triples.split(separator: ",").enumerated().compactMap { (i, t) -> USBInterfaceInfo? in
+            let parts = t.trimmingCharacters(in: .whitespaces).split(separator: ".").compactMap { UInt8($0, radix: 16) }
+            guard parts.count == 3 else { return nil }
+            return USBInterfaceInfo(number: i, classCode: parts[0], subclassCode: parts[1], protocolCode: parts[2])
+        }
+        return SyntheticFixtures.device("studio-\(Fingerprint.short(name + vendor + product))", name: name, manufacturer: "Studio fixture",
+                                        usb: USBDeviceDescriptor(vendorID: v, productID: p, productName: name, bcdUSB: 0x0200, speed: speed,
+                                                                 locationID: 0xFE700000, interfaces: interfaces))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Synthetic device fixture").font(.headline).foregroundStyle(Theme.text)
+            Text("Describe a device by its descriptors to test identification rules and this adapter's match rules. Fixtures are always labelled SYNTHETIC and never mixed into hardware discovery.")
+                .font(.caption).foregroundStyle(Theme.dim)
+            HStack {
+                TextField("Product name", text: $name)
+                TextField("Vendor ID", text: $vendor).frame(width: 90)
+                TextField("Product ID", text: $product).frame(width: 90)
+            }
+            HStack {
+                TextField("Interfaces (CC.SS.PP, comma-separated)", text: $triples)
+                Picker("Speed", selection: $speed) { ForEach(USBSpeed.allCases, id: \.self) { Text($0.shortName).tag($0) } }.frame(width: 200)
+            }
+            if let f = fixture {
+                let ident = model.identification.identify(f)
+                let matched = manifest.match.evaluate(f)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack { ProvenanceBadge(provenance: .synthetic); Text(f.displayName).font(.callout).foregroundStyle(Theme.text) }
+                    Text("Identification: \(ident.profileName ?? "no profile") · \(ident.category.displayName) · confidence \(ident.confidence.displayName)")
+                        .font(.caption).foregroundStyle(Theme.text)
+                    Text("This adapter's match rules: \(matched == nil ? "no match" : "match (" + (matched?.evidence.joined(separator: "; ") ?? "") + ")")")
+                        .font(.caption).foregroundStyle(matched == nil ? Theme.warning : Theme.success)
+                    Text("Protocols evidenced: " + ProtocolCatalog.protocols(evidencedBy: f).joined(separator: ", ")).font(.caption2).foregroundStyle(Theme.dim)
+                    Text("Applicable host operations: " + model.engine.applicableTests(for: f, identification: ident).map(\.id).joined(separator: ", "))
+                        .font(.caption2).foregroundStyle(Theme.dim)
+                }
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Theme.navyHigh.opacity(0.4)))
+            } else {
+                Text("Enter vendor and product IDs in hexadecimal.").font(.caption).foregroundStyle(Theme.warning)
             }
         }
     }

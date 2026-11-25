@@ -79,6 +79,11 @@ struct VisualizerView: View {
                         }
                     }
                     .contentShape(Rectangle())
+                    .onTapGesture(count: 2, coordinateSpace: .local) { point in
+                        if let id = nearest(point, positions), let node = g.node(id), let deviceID = node.deviceID {
+                            openWorkspace(deviceID)
+                        }
+                    }
                     .onTapGesture(coordinateSpace: .local) { point in
                         selectedNode = positions.min { a, b in a.value.distance(to: point) < b.value.distance(to: point) }
                             .flatMap { $0.value.distance(to: point) < 40 ? $0.key : nil }
@@ -96,6 +101,17 @@ struct VisualizerView: View {
             VisualizerSidePanel(graph: g, selectedNode: selectedNode)
                 .frame(minWidth: 280, idealWidth: 320, maxWidth: 380)
         }
+    }
+
+    func nearest(_ point: CGPoint, _ positions: [String: CGPoint]) -> String? {
+        positions.min { a, b in a.value.distance(to: point) < b.value.distance(to: point) }
+            .flatMap { $0.value.distance(to: point) < 40 ? $0.key : nil }
+    }
+
+    func openWorkspace(_ id: DeviceIdentifier) {
+        model.selectedDeviceID = id
+        model.workspaceTab = .overview
+        model.section = .connectedSystems
     }
 
     func accessibilitySummary(_ g: TopologyGraph) -> String {
@@ -144,10 +160,34 @@ struct VisualizerView: View {
             var symbol = context.resolve(Image(systemName: symbolName(n)))
             symbol.shading = .color(color)
             context.draw(symbol, in: CGRect(x: p.x - radius * 0.5, y: p.y - radius * 0.5, width: radius, height: radius))
+            // Interface satellites: one per USB interface, green when macOS bound a driver.
+            if let id = n.deviceID, let interfaces = model.record(id)?.device.usb?.interfaces, !interfaces.isEmpty {
+                let shown = Array(interfaces.prefix(10))
+                for (k, i) in shown.enumerated() {
+                    let angle = -Double.pi / 2 + Double(k) * (2 * Double.pi / Double(shown.count)) + time * 0.15
+                    let sp = CGPoint(x: p.x + (radius + 9) * CGFloat(cos(angle)), y: p.y + (radius + 9) * CGFloat(sin(angle)))
+                    context.fill(Path(ellipseIn: CGRect(x: sp.x - 3, y: sp.y - 3, width: 6, height: 6)),
+                                 with: .color(i.hasDriver ? Theme.success : Theme.dim.opacity(0.7)))
+                }
+            }
+            // Authorization requirement: pulsing lock badge.
+            let intel = n.deviceID.flatMap { model.snapshot($0) }
+            if let st = intel?.state, st.needsUserAttention {
+                let pulse = 0.6 + 0.4 * abs(sin(time * 2.5))
+                var lock = context.resolve(Image(systemName: st == .connectionLimited ? "exclamationmark.triangle.fill" : "lock.fill"))
+                lock.shading = .color(Theme.warning.opacity(pulse))
+                context.draw(lock, in: CGRect(x: p.x + radius * 0.55, y: p.y - radius - 4, width: 14, height: 14))
+            }
             let title = Text(Self.truncated(n.label)).font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.text)
-            context.draw(title, at: CGPoint(x: p.x, y: p.y + radius + 11))
-            let sub = Text(n.status?.displayName ?? n.subtitle).font(.system(size: 9)).foregroundColor(n.status.map { Theme.color(for: $0) } ?? Theme.dim)
-            context.draw(sub, at: CGPoint(x: p.x, y: p.y + radius + 24))
+            context.draw(title, at: CGPoint(x: p.x, y: p.y + radius + 13))
+            let subText = intel.map { "\($0.state.number)/13 · \($0.state.displayName)" } ?? (n.status?.displayName ?? n.subtitle)
+            let sub = Text(subText).font(.system(size: 9)).foregroundColor(n.status.map { Theme.color(for: $0) } ?? Theme.dim)
+            context.draw(sub, at: CGPoint(x: p.x, y: p.y + radius + 26))
+            if let id = n.deviceID, let protocols = model.record(id)?.identification.exposedProtocols.filter({ $0 != "usb.descriptor" && $0 != "synthetic.fixture" }), !protocols.isEmpty {
+                let chips = Text(protocols.prefix(3).map { ProtocolCatalog.descriptor($0)?.name.components(separatedBy: " (").first ?? $0 }.joined(separator: " · "))
+                    .font(.system(size: 8, weight: .medium)).foregroundColor(Theme.violet)
+                context.draw(chips, at: CGPoint(x: p.x, y: p.y + radius + 38))
+            }
         }
     }
 
@@ -201,7 +241,7 @@ private struct VisualizerSidePanel: View {
                         HStack { Circle().fill(Theme.color(for: s)).frame(width: 8, height: 8); Text(s.displayName).font(.caption) }
                     }
                     HStack { Circle().fill(Theme.synthetic).frame(width: 8, height: 8); Text("Synthetic fixture (not hardware)").font(.caption) }
-                    Text("Animated paths: live links. Pulsing ring: diagnostics running. Hubs that macOS does not report are never invented; their devices attach to the bus.")
+                    Text("Animated paths: live links. Pulsing ring: diagnostics running. Satellites: USB interfaces (green = driver bound). Lock: authorization needed. Double-click a device to open its workspace. Hubs that macOS does not report are never invented.")
                         .font(.caption2).foregroundStyle(Theme.dim).padding(.top, 4)
                 }
                 .glassPanel(padding: 12)
@@ -236,8 +276,13 @@ private struct NodeDetail: View {
                 ForEach(r.compatibility) { c in
                     Text("• \(c.adapterName) (\(c.status.rawValue))").font(.caption)
                 }
+                if let s = model.snapshot(id) {
+                    IntelligenceStateBadge(state: s.state)
+                    Text("Next: \(s.nextAction.title)").font(.caption).foregroundStyle(s.state.needsUserAttention ? Theme.warning : Theme.dim)
+                }
+                Text("Interfaces: \(r.device.usb?.interfaces.map { DeviceMatchRules.triple($0) }.joined(separator: ", ") ?? "—")").font(.caption2.monospaced()).foregroundStyle(Theme.dim)
                 HStack {
-                    Button("Details") { model.selectedDeviceID = id; model.section = .connectedSystems }
+                    Button("Open intelligence workspace") { model.selectedDeviceID = id; model.workspaceTab = .overview; model.section = .connectedSystems }
                     if r.device.isPresent {
                         Button("Diagnose") { model.runDefaultSuite(on: r) }
                             .disabled(model.activeRuns[id] != nil)

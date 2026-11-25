@@ -15,9 +15,71 @@ struct EcosystemView: View {
                     IntegrationCard(integration: integration)
                 }
             }
+            DeviceFamiliesPanel()
+            SharingPanel()
             NavigationContractPanel()
         }
         .workspacePage()
+    }
+}
+
+/// Universal Device Intelligence: which families have real adapters, and which are only planned.
+private struct DeviceFamiliesPanel: View {
+    @EnvironmentObject var model: AppModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Device intelligence families").font(.headline).foregroundStyle(Theme.text)
+            Text("Support is claimed only where an adapter and compatibility tests exist.").font(.caption).foregroundStyle(Theme.dim)
+            HStack(spacing: 8) {
+                Label("Apple iPhone / iPad — implemented (CoreDevice + IOKit), awaiting physical verification", systemImage: "checkmark.seal.fill")
+                    .font(.callout).foregroundStyle(Theme.success)
+                Spacer()
+                Text(model.toolchain?.summary ?? "Inspecting Xcode…").font(.caption).foregroundStyle(Theme.dim)
+            }
+            Label("Generic USB / Thunderbolt — host-side information and diagnostics", systemImage: "checkmark.circle").font(.callout).foregroundStyle(Theme.cyan)
+            ForEach(PlannedDeviceFamily.all) { f in
+                HStack {
+                    Image(systemName: f.category.symbolName).foregroundStyle(Theme.dim).frame(width: 18)
+                    Text(f.name).font(.callout).foregroundStyle(Theme.text)
+                    Text(f.intendedInterfaces.joined(separator: " · ")).font(.caption).foregroundStyle(Theme.dim)
+                    Spacer()
+                    Text(f.status.uppercased()).font(.caption2.weight(.heavy)).foregroundStyle(Theme.violet)
+                }
+            }
+        }
+        .glassPanel()
+    }
+}
+
+/// Prepared exports for HCG Server (inventory) and HCG Sentinel (security findings). Nothing is sent.
+private struct SharingPanel: View {
+    @EnvironmentObject var model: AppModel
+    @State private var document: ExportDocument?
+    @State private var exporting = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Prepared sharing (local files only)").font(.headline).foregroundStyle(Theme.text)
+            Text("No HCG Server is paired and no HCG Connect client exists for System Tester, so nothing is transmitted. These exports use the formats those products will accept.")
+                .font(.caption).foregroundStyle(Theme.dim)
+            HStack {
+                Button("Export device inventory (hcg.systemtester.inventory/1)…") { export({ try model.exportInventorySnapshot() }, name: "hcg-inventory") }
+                Button("Export security findings for Sentinel (hcg.diagnostic-report/1)…") { export({ try model.exportSentinelFindings() }, name: "hcg-connection-security") }
+            }
+        }
+        .glassPanel()
+        .fileExporter(isPresented: $exporting, document: document, contentType: .json, defaultFilename: document?.filename ?? "export") { result in
+            if case .failure(let e) = result { model.banner = "Export failed: \(e.localizedDescription)" }
+        }
+    }
+
+    func export(_ make: () throws -> Data, name: String) {
+        do {
+            document = ExportDocument(data: try make(), filename: "\(name).json")
+            exporting = true
+        } catch {
+            model.banner = "Export failed: \(error.localizedDescription)"
+        }
     }
 }
 

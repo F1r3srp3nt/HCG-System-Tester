@@ -139,7 +139,9 @@ public enum SentinelDeepLink {
 public enum SystemTesterRoute: String, CaseIterable, Hashable {
     case commandCenter = "command-center"
     case connectedSystems = "connected-systems"
+    case liveMonitor = "live-monitor"
     case visualizer
+    case usbInspector = "usb-inspector"
     case diagnostics
     case laboratory
     case adapterLibrary = "adapters"

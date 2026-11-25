@@ -165,6 +165,24 @@ public struct DeviceInventorySnapshot: Codable, Hashable {
 
 /// Defensive findings for HCG Sentinel, expressed as `hcg.diagnostic-report/1` findings.
 public enum ConnectionSecurityFindings {
+    /// A complete `hcg.diagnostic-report/1` document of kind `systemtester.connection-security`.
+    public static func report(records: [DeviceRecord], snapshots: [DeviceIdentifier: IntelligenceSnapshot], adapters: [RegisteredAdapter],
+                              installationID: String, deviceName: String, redactor: Redactor = Redactor()) -> DeviceLinkDiagnosticReport {
+        let found = findings(records: records, snapshots: snapshots, adapters: adapters).map { f -> DeviceLinkDiagnosticReport.Finding in
+            var x = f
+            x.title = redactor.redact(f.title)
+            x.location = f.location.map { redactor.redact($0) }
+            return x
+        }
+        let base = ReportGenerator.make(title: "Connection security findings", runs: [], records: records.filter(\.device.isPresent), redactor: redactor)
+        var link = ReportGenerator.deviceLinkReport(base, installationID: installationID, deviceName: deviceName)
+        link.kind = "systemtester.connection-security"
+        link.findings = found
+        let highest = found.compactMap(\.severity).max { ReportGenerator.rank($0) < ReportGenerator.rank($1) }
+        link.summary = DeviceLinkDiagnosticReport.Summary(status: found.isEmpty ? "ok" : "findings", highestSeverity: highest, findingCount: found.count)
+        return link
+    }
+
     public static func findings(records: [DeviceRecord], snapshots: [DeviceIdentifier: IntelligenceSnapshot], adapters: [RegisteredAdapter]) -> [DeviceLinkDiagnosticReport.Finding] {
         var out: [DeviceLinkDiagnosticReport.Finding] = []
         for r in records where r.device.isPresent {

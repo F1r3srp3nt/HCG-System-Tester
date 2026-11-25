@@ -29,7 +29,7 @@ enum SnapshotDriver {
                 window.setContentSize(NSSize(width: 1480, height: 920))
                 window.center()
             }
-            let target = model.presentRecords.first { $0.device.provenance.isSynthetic && $0.device.name.contains("USB 3 SSD") }
+            let target = model.presentRecords.first { $0.device.provenance.isSynthetic && $0.device.name.contains("iPhone") }
                 ?? model.presentRecords.first
             for section in WorkspaceSection.allCases {
                 model.section = section
@@ -44,6 +44,21 @@ enum SnapshotDriver {
                 }
                 try? await Task.sleep(nanoseconds: 1_800_000_000)
                 capture(name: String(format: "%02ld-%@", (WorkspaceSection.allCases.firstIndex(of: section) ?? 0) + 1, section.rawValue), into: dir)
+            }
+            // Device Intelligence workspace on the synthetic iPhone: before and after Apple's (simulated) pairing flow.
+            if let t = target {
+                model.selectedDeviceID = t.id
+                model.section = .connectedSystems
+                model.workspaceTab = .overview
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                capture(name: "20-workspace-overview-unpaired", into: dir)
+                model.performIntelligenceAction(.pairDevice, on: t)
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                for tab in DeviceWorkspaceTab.allCases {
+                    model.workspaceTab = tab
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    capture(name: "2\(DeviceWorkspaceTab.allCases.firstIndex(of: tab)! + 1)-workspace-\(tab.rawValue)", into: dir)
+                }
             }
             let summary = model.records.map { "\($0.device.displayName)\t\($0.status.displayName)\t\($0.device.provenance.rawValue)" }.joined(separator: "\n")
             try? summary.write(to: dir.appendingPathComponent("devices.tsv"), atomically: true, encoding: .utf8)

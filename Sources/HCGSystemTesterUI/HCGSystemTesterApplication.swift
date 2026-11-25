@@ -40,7 +40,7 @@ struct WorkspaceCommands: Commands {
         CommandMenu("Workspace") {
             ForEach(WorkspaceSection.allCases) { section in
                 Button(section.title) { model.section = section }
-                    .keyboardShortcut(section.shortcut, modifiers: .command)
+                    .keyboardShortcut(section.shortcut, modifiers: section.shortcutModifiers)
             }
         }
         CommandMenu("Devices") {
@@ -87,7 +87,9 @@ struct SectionContent: View {
         switch section {
         case .commandCenter: CommandCenterView()
         case .connectedSystems: ConnectedSystemsView()
+        case .liveMonitor: LiveMonitorView()
         case .visualizer: VisualizerView()
+        case .usbInspector: USBInspectorView()
         case .diagnostics: DiagnosticsView()
         case .laboratory: LaboratoryView()
         case .adapterLibrary: AdapterLibraryView()
@@ -127,6 +129,7 @@ struct Sidebar: View {
     func badge(for section: WorkspaceSection) -> Int {
         switch section {
         case .connectedSystems: return model.presentRecords.count
+        case .liveMonitor: return model.presentRecords.filter { model.snapshot($0.id)?.state.needsUserAttention == true }.count
         case .diagnostics: return model.activeRuns.count
         case .reports: return model.reports.count
         default: return 0

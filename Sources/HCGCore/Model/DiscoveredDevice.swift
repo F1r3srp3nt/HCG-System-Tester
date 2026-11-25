@@ -89,11 +89,13 @@ public struct USBInterfaceInfo: Codable, Hashable, Identifiable {
     public var name: String?
     /// IOKit class names of drivers/services attached to the interface (empty when no driver matched).
     public var attachedServices: [String]
+    /// bNumEndpoints from the interface descriptor, when macOS publishes it.
+    public var endpointCount: Int?
 
     public var id: String { "\(number).\(alternateSetting)" }
 
     public init(number: Int, alternateSetting: Int = 0, classCode: UInt8, subclassCode: UInt8 = 0, protocolCode: UInt8 = 0,
-                name: String? = nil, attachedServices: [String] = []) {
+                name: String? = nil, attachedServices: [String] = [], endpointCount: Int? = nil) {
         self.number = number
         self.alternateSetting = alternateSetting
         self.classCode = classCode
@@ -101,6 +103,7 @@ public struct USBInterfaceInfo: Codable, Hashable, Identifiable {
         self.protocolCode = protocolCode
         self.name = name
         self.attachedServices = attachedServices
+        self.endpointCount = endpointCount
     }
 
     public var usbClass: USBClass { USBClass(code: classCode) }

@@ -34,7 +34,9 @@ public enum USBRegistryParser {
         "idVendor", "idProduct", "USB Vendor Name", "USB Product Name", "kUSBVendorString", "kUSBProductString",
         "USB Serial Number", "kUSBSerialNumberString", "bDeviceClass", "bDeviceSubClass", "bDeviceProtocol",
         "bcdDevice", "bcdUSB", "Device Speed", "locationID", "bNumConfigurations", "sessionID", "Built-In",
-        "kUSBCurrentConfiguration", "IOClass", "UsbPowerSinkAllocation", "UsbPowerSourceAllocation"
+        "kUSBCurrentConfiguration", "IOClass", "UsbPowerSinkAllocation", "UsbPowerSourceAllocation",
+        "bMaxPacketSize0", "USB Address", "kUSBAddress", "UsbLinkSpeed", "kUSBPreferredConfiguration",
+        "iManufacturer", "iProduct", "iSerialNumber", "Requested Power", "Bus Power Available"
     ]
 
     public static func parseDevice(properties: [String: Any], registryEntryID: UInt64?, ioClassName: String?,
@@ -70,7 +72,8 @@ public enum USBRegistryParser {
             subclassCode: uint8(properties[Key.interfaceSubClass]) ?? 0,
             protocolCode: uint8(properties[Key.interfaceProtocol]) ?? 0,
             name: firstString(properties, Key.interfaceNames),
-            attachedServices: attachedServices
+            attachedServices: attachedServices,
+            endpointCount: int(properties["bNumEndpoints"])
         )
     }
 
