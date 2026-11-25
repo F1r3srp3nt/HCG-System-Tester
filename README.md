@@ -1,7 +1,7 @@
 # HCG System Tester
 
 **Modular system connectivity, hardware discovery and diagnostics for macOS.**
-Hakmi Capital Group · `com.hakmicapitalgroup.systemtester` · version 0.1.0 · LifeOS realm: Sovereign Technology
+Hakmi Capital Group · `com.hakmicapitalgroup.systemtester` · version 0.2.0 · LifeOS realm: Sovereign Technology
 
 > **EVERYTHING IS INTERCHANGEABLE.** Build. Connect. Discover. Diagnose. Improve.
 
@@ -24,6 +24,29 @@ exchanged data. Unknown devices are shown with their raw descriptors and are nev
 *Command Center on a CI Mac: two real (virtual) USB devices discovered by IOKit, plus opt-in fixtures labelled SYNTHETIC.
 More screenshots and CI results are in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md).*
 
+## New in 0.2.0: Device Intelligence
+
+- **Apple Device Intelligence Adapter.** Connect an iPhone or iPad over USB-C. System Tester correlates the IOKit USB
+  device with Xcode's CoreDevice (`xcrun devicectl … --json-output`) and shows the real model, product type, iOS version
+  and build, storage capacity, pairing status, Developer Mode, services and response latency. Every field shows its
+  source; every missing field says why. Battery level and free space come from optional libimobiledevice.
+  → [docs/APPLE-ADAPTER.md](docs/APPLE-ADAPTER.md) · [iPhone acceptance test](docs/IPHONE-ACCEPTANCE.md)
+- **13-state connection ladder** (waiting → … → diagnostics available / limited / unsupported / disconnected) with
+  evidence for each step and the next available action. Guided Trust/pairing uses Apple's own flow and never bypasses it.
+- **Device Intelligence workspace** with Overview (illustration, state, capabilities, timeline), Hardware, Software
+  (incl. installed apps on request), Diagnostics, Authorization, Activity and Reports tabs.
+- **Live Device Monitor** (uptime, availability, latency graphs, drop-outs, configurable intervals),
+  **USB Connection Inspector** (charging-only vs data vs host-to-host vs enumerated vs functional), **Visualizer 2.0**,
+  11 Apple diagnostics, Studio reference implementation and fixture editor, prepared HCG Server and Sentinel exports.
+
+| Capability | Status |
+|---|---|
+| IOKit USB/Thunderbolt discovery, identification, host diagnostics | ✅ implemented, verified on CI and on your MacBook (0.1.0) |
+| Apple adapter (devicectl/CoreDevice, pairing flow, Apple diagnostics) | ✅ implemented and tested against fake devicectl output; **awaiting physical iPhone/iPad verification** |
+| Battery level / free space | ⚙︎ only with optional libimobiledevice, after pairing |
+| Synthetic iPhone fixture | 🧪 simulated, labelled SYNTHETIC everywhere |
+| Android, consoles, appliances, network, microcontrollers… | 🔜 planned; no support is claimed |
+
 ## Quick start (MacBook Pro, Apple silicon, Xcode)
 
 ```bash
@@ -45,6 +68,8 @@ scripts/build-app.sh --open             # builds dist/HCG System Tester.app (ad-
 ```bash
 swift run hcg-probe --watch             # live attach/detach stream
 swift run hcg-probe --diagnose          # list + read-only diagnostics on every device
+swift run hcg-probe --toolchain         # what your Xcode / devicectl supports
+swift run hcg-probe --apple             # Apple Device Intelligence for a connected iPhone / iPad
 swift run HCGSystemTester               # launch the full app from SwiftPM
 ```
 
@@ -89,6 +114,8 @@ docs/                         Architecture, SDK, testing, limitations, ecosystem
 ## Documentation
 
 - [Build & run on macOS](docs/BUILD.md)
+- [iPhone 16 Pro Max acceptance test](docs/IPHONE-ACCEPTANCE.md)
+- [Apple Device Intelligence Adapter](docs/APPLE-ADAPTER.md)
 - [Physical-device test checklist](docs/PHYSICAL-TESTING.md)
 - [Test results (CI)](docs/TEST-RESULTS.md)
 - [Actual hardware compatibility limitations](docs/HARDWARE-LIMITATIONS.md)

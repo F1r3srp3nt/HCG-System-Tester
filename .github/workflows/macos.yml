@@ -48,6 +48,9 @@ jobs:
       - name: Probe real hardware of the runner (read-only)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
+          swift run hcg-probe --toolchain
+          swift run hcg-probe --synthetic --apple --pair
+          swift run hcg-probe --apple
           swift run hcg-probe
           swift run hcg-probe --json > probe.json && head -c 2000 probe.json
 
@@ -88,6 +91,15 @@ jobs:
         run: |
           if [ -d App/HCGSystemTester.xcodeproj ]; then
             xcodebuild -project App/HCGSystemTester.xcodeproj -scheme HCGSystemTester -configuration Debug \
-              -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" build | tail -n 60
-            exit ${PIPESTATUS[0]}
+              -destination 'platform=macOS' -derivedDataPath build/xcode CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" build | tail -n 40
+            status=${PIPESTATUS[0]}
+            [ "$status" -eq 0 ] || exit "$status"
+            APP="build/xcode/Build/Products/Debug/HCG System Tester.app"
+            echo "== App icon verification =="
+            /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$APP/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist"
+            ls -la "$APP/Contents/Resources/"
+            test -f "$APP/Contents/Resources/Assets.car"
+            test -f "$APP/Contents/Resources/AppIcon.icns" && echo "AppIcon.icns present in Xcode-built bundle"
+            test -f "dist/HCG System Tester.app/Contents/Resources/AppIcon.icns" && echo "AppIcon.icns present in build-app.sh bundle"
           fi

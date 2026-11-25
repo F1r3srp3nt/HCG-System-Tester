@@ -2,7 +2,13 @@
 """Renders the HCG System Tester app icon (obsidian/navy squircle, cyan→violet
 connection rings and a host node) at every macOS icon size.
 
-Usage: python3 scripts/render-icon.py <AppIcon.appiconset directory>
+Usage:
+  python3 scripts/render-icon.py <AppIcon.appiconset directory>
+      renders the built-in HCG icon at every size
+  python3 scripts/render-icon.py <AppIcon.appiconset directory> --source <your-icon.png> [--icns Packaging/AppIcon.icns]
+      uses a supplied square PNG (1024×1024 recommended) for every size and, optionally, the .icns
+      used by scripts/build-app.sh and HCG Executable Maker
+
 Only Pillow is required. The output is deterministic.
 """
 import json
@@ -72,17 +78,32 @@ def render(px):
 
 
 def main():
-    out = sys.argv[1] if len(sys.argv) > 1 else "AppIcon.appiconset"
+    args = sys.argv[1:]
+    out = args[0] if args and not args[0].startswith("--") else "AppIcon.appiconset"
+    source = args[args.index("--source") + 1] if "--source" in args else None
+    icns = args[args.index("--icns") + 1] if "--icns" in args else None
     os.makedirs(out, exist_ok=True)
+    base = None
+    if source:
+        base = Image.open(source).convert("RGBA")
+        if base.size[0] != base.size[1]:
+            raise SystemExit(f"{source} must be square (got {base.size[0]}×{base.size[1]})")
+        if base.size[0] < 512:
+            print(f"warning: {source} is {base.size[0]} px; 1024 px is recommended for Retina sizes")
     images = []
     for pt, scale in SIZES:
         px = pt * scale
         name = f"icon_{pt}x{pt}{'@2x' if scale == 2 else ''}.png"
-        render(px).save(os.path.join(out, name))
+        img = base.resize((px, px), Image.LANCZOS) if base else render(px)
+        img.save(os.path.join(out, name))
         images.append({"idiom": "mac", "scale": f"{scale}x", "size": f"{pt}x{pt}", "filename": name})
     with open(os.path.join(out, "Contents.json"), "w") as f:
         json.dump({"images": images, "info": {"author": "xcode", "version": 1}}, f, indent=2)
-    print(f"Wrote {len(images)} icons to {out}")
+    if icns:
+        big = base.resize((1024, 1024), Image.LANCZOS) if base else render(1024)
+        big.save(icns, sizes=[(16, 16), (32, 32), (64, 64), (128, 128), (256, 256), (512, 512), (1024, 1024)])
+        print(f"Wrote {icns}")
+    print(f"Wrote {len(images)} icons to {out}" + (f" from {source}" if source else ""))
 
 
 if __name__ == "__main__":

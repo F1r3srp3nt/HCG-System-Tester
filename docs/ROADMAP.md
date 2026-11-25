@@ -9,6 +9,7 @@
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M1 — 0.1.0 MVP** (this release) | Real USB/Thunderbolt discovery, identification, five-layer assessment, adapter SDK, diagnostics, laboratory, visualizer, studio, reports, ecosystem panel, CLI | [Physical checklist](PHYSICAL-TESTING.md) completed on the M4 Max with reports exported |
+| **M1.5 — 0.2.0 Device Intelligence** (this release) | Apple Device Intelligence Adapter, 13-state ladder, workspace, Live Monitor, USB Inspector, Visualizer 2.0 | [iPhone acceptance test](IPHONE-ACCEPTANCE.md) passed on iPhone 16 Pro Max and iPad Pro M4 |
 | **M2 — Serial sessions** | Authorised, read-only serial port open; loopback/echo; measured round-trip latency | The first real device reaches **Connected** with evidence |
 | **M3 — Network & Bluetooth** | Network framework path monitoring, DNS-SD for documented services, Core Bluetooth discovery; Local Network and Bluetooth permission texts | Network nodes in the Visualizer; reachability and latency diagnostics |
 | **M4 — Storage health** | SMART/health through bridges that expose it via supported APIs | Health reported where available, limitation reported otherwise |

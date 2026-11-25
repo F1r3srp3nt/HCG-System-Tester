@@ -24,7 +24,8 @@ These are physical and platform facts, not missing polish. System Tester reports
 | Authorization | ✅ recorded per device (no device-side pairing yet) |
 | Functional communication | ❌ on real hardware: diagnostics are host-side and read-only. First real verification is the serial adapter (milestone 2) |
 
-**No real device reaches *Connected* in 0.1.0.** This is intentional. *Connected* means data was exchanged.
+**In 0.1.0 no real device reached *Connected*.** Since 0.2.0 a paired iPhone/iPad that answers a live CoreDevice query
+reaches *Authenticated* (communication within the device's own authorization); all other devices remain host-side.
 
 ## Device families
 
@@ -35,7 +36,7 @@ These are physical and platform facts, not missing polish. System Tester reports
 | **PlayStation controllers** | HID (+ audio on DualSense) | Identification, interfaces, HID driver binding | Input reports are never captured |
 | **Xbox controllers** | Vendor GIP protocol (or XInput on older pads) | Identification, descriptors; status *Unsupported* for the vendor protocol | macOS handles them through the Game Controller framework; System Tester does not speak GIP |
 | **Nintendo Switch Pro / Joy-Con grip** | HID | Identification | — |
-| **iPhone / iPad** | PTP + Apple usbmux (vendor interface) | Identification; status *Adapter required* | Anything beyond descriptors needs "Trust This Computer" and Apple's supported tooling. No pairing, unlocking or backup access |
+| **iPhone / iPad** | PTP + Apple usbmux (+ NCM on recent iOS) | 0.2.0: model, OS, build, storage capacity, pairing, Developer Mode, services and latency via Xcode CoreDevice after Trust; battery/free space with optional libimobiledevice | Needs an unlocked device, Trust/pairing and Xcode 15+. No unlocking, passcode bypass, backups, or Developer Mode changes. Battery health/cycle count not exposed |
 | **Android phones** | MTP/PTP, optional ADB (`FF.42.01`), optional RNDIS/NCM tethering | Identification by interface; status *Adapter required* | macOS has no MTP client; ADB needs platform-tools and on-device RSA approval (planned optional adapter) |
 | **USB storage** | Mass Storage (BOT/UAS) | BSD disk, medium size, link speed, interface validation | SMART is usually not passed through USB bridges; file systems are never read |
 | **USB serial / microcontrollers** | CDC ACM or vendor bridge | Serial node detection, identification | Opening ports is planned (milestone 2) behind a per-device authorisation |

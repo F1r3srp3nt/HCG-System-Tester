@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.0 — Device Intelligence Update
+
+- Universal Device Intelligence Engine: provider protocol, sourced fields (every value names its tool and key; every gap
+  its reason), 13-state connection ladder with evidence and next actions, timeline, generic USB provider, planned
+  families listed without claiming support.
+- Apple Device Intelligence Adapter (reference implementation): runtime Xcode/devicectl capability inspection,
+  `devicectl list devices` / `device info details` / `lockState` / `apps` / `manage pair` via allow-listed argument
+  vectors and JSON output, UDID↔USB-serial correlation, model facts (USB capability), optional libimobiledevice battery and
+  disk usage, user-confirmed pairing, 11 read-only Apple diagnostics.
+- Device Intelligence workspace (7 tabs) with device illustration; Live Device Monitor; USB Connection Inspector
+  (endpoints, drivers, connection classes); Connection Visualizer 2.0 (interface satellites, authorization badges,
+  double-click to workspace).
+- Device-side authorization evidence (pairing) feeds the connectivity layers: a paired, answering iPhone reaches
+  *Authenticated*; an enumerated one stays *Diagnostics available*.
+- Reports: device information / compatibility / diagnostic reports (`hcg.systemtester.device-report/1`), identifiers
+  redacted by default; inventory snapshot (`hcg.systemtester.inventory/1`) and Sentinel connection-security findings.
+- Adapter Developer Studio: Apple reference project, synthetic fixture editor.
+- `hcg-probe --toolchain`, `--apple [--pair]`; icon script accepts a supplied PNG; CI verifies the icon is bundled.
+
 ## 0.1.0 — first working MVP
 
 - Native macOS SwiftUI workstation with 10 sections: Command Center, Connected Systems, Connection Visualizer, Diagnostics,
