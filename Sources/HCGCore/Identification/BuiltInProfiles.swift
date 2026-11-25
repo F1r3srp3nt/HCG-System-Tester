@@ -76,19 +76,19 @@ public enum BuiltInProfiles {
         DeviceProfile(
             id: "apple.iphone", name: "Apple iPhone", category: .smartphone, family: "Apple mobile devices",
             match: DeviceMatchRules(vendorIDs: [0x05AC], nameContains: ["iPhone"]),
-            exposedProtocols: ["usb.descriptor", "usb.ptp", "apple.usbmux"],
-            recommendedAdapters: ["com.hakmicapitalgroup.adapter.apple-mobile"],
+            exposedProtocols: ["usb.descriptor", "usb.ptp", "apple.usbmux", "apple.coredevice"],
+            recommendedAdapters: ["com.hakmicapitalgroup.adapter.apple-device-intelligence"],
             knownLimitations: [
-                "Deeper information requires the device to trust this Mac (\"Trust This Computer\") and Apple's supported tooling (Finder / Apple Configurator).",
-                "System Tester does not pair with or unlock iOS devices."
+                "Model, OS and service information need the iPhone to trust this Mac (Trust This Computer / pairing) and Xcode's devicectl.",
+                "System Tester never bypasses the passcode, pairing, USB Restricted Mode or Activation Lock."
             ],
             priority: 90),
         DeviceProfile(
             id: "apple.ipad", name: "Apple iPad", category: .tablet, family: "Apple mobile devices",
             match: DeviceMatchRules(vendorIDs: [0x05AC], nameContains: ["iPad"]),
-            exposedProtocols: ["usb.descriptor", "usb.ptp", "apple.usbmux"],
-            recommendedAdapters: ["com.hakmicapitalgroup.adapter.apple-mobile"],
-            knownLimitations: ["Requires device trust for anything beyond descriptors."],
+            exposedProtocols: ["usb.descriptor", "usb.ptp", "apple.usbmux", "apple.coredevice"],
+            recommendedAdapters: ["com.hakmicapitalgroup.adapter.apple-device-intelligence"],
+            knownLimitations: ["Model, OS and service information need the iPad to trust this Mac and Xcode's devicectl."],
             priority: 90),
         DeviceProfile(
             id: "android.adb", name: "Android device (USB debugging enabled)", category: .smartphone, family: "Android",

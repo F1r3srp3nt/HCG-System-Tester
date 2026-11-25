@@ -8,6 +8,8 @@ public struct DeviceRecord: Identifiable, Hashable {
     public var state: DeviceStateMachine
     public var statusReason: String
     public var functionalEvidence: [String]
+    /// Device-side authorization evidence (e.g. an established pairing reported by the device's services).
+    public var authorizationEvidence: [String] = []
     public var stableKey: String
 
     public var id: DeviceIdentifier { device.id }
@@ -106,7 +108,8 @@ public final class DeviceInventory {
             device.firstSeen = existing.device.firstSeen
             var state = existing.state
             if state.status == .disconnected { state.advance(to: .detected, reason: "Re-attached") }
-            records[device.id] = evaluate(device: device, state: state, functionalEvidence: existing.functionalEvidence)
+            records[device.id] = evaluate(device: device, state: state, functionalEvidence: existing.functionalEvidence,
+                                          authorizationEvidence: existing.authorizationEvidence)
             return
         }
         records[device.id] = evaluate(device: device, state: DeviceStateMachine(initial: .detected, at: device.firstSeen, reason: "Discovered by \(device.source)"),
@@ -120,6 +123,7 @@ public final class DeviceInventory {
         r.device.isPresent = false
         r.device.lastSeen = at
         r.functionalEvidence = []
+        r.authorizationEvidence = []
         let assessment = ConnectivityAssessor.assess(device: r.device, identification: r.identification, compatibility: [],
                                                      deviceAuthorized: false, functionalEvidence: [])
         r.assessment = assessment
@@ -132,13 +136,13 @@ public final class DeviceInventory {
                            detail: "Was \(previous.displayName).", provenance: r.device.provenance))
     }
 
-    private func evaluate(device: DiscoveredDevice, state: DeviceStateMachine, functionalEvidence: [String]) -> DeviceRecord {
+    private func evaluate(device: DiscoveredDevice, state: DeviceStateMachine, functionalEvidence: [String], authorizationEvidence: [String] = []) -> DeviceRecord {
         let ident = identification.identify(device)
         let compat = adapters.compatibility(for: device, identification: ident)
         let key = device.stableKey(salt: keySalt)
         let assessment = ConnectivityAssessor.assess(device: device, identification: ident, compatibility: compat,
                                                      deviceAuthorized: authorization.isDeviceAuthorized(key),
-                                                     functionalEvidence: functionalEvidence)
+                                                     functionalEvidence: functionalEvidence, authorizationEvidence: authorizationEvidence)
         let (target, reason) = ConnectivityAssessor.status(device: device, identification: ident, compatibility: compat, assessment: assessment)
         var s = state
         let before = s.status
@@ -151,14 +155,15 @@ public final class DeviceInventory {
                                detail: "\(before.displayName) → \(s.status.displayName)", provenance: device.provenance))
         }
         return DeviceRecord(device: device, identification: ident, compatibility: compat, assessment: assessment, state: s,
-                            statusReason: reason, functionalEvidence: functionalEvidence, stableKey: key)
+                            statusReason: reason, functionalEvidence: functionalEvidence, authorizationEvidence: authorizationEvidence, stableKey: key)
     }
 
     /// Re-runs identification and assessment (after adapters, profiles or authorisations change).
     public func reevaluateAll() {
         identification.register(contentsOf: adapters.contributedProfiles)
         for (id, r) in records where r.device.isPresent {
-            records[id] = evaluate(device: r.device, state: r.state, functionalEvidence: r.functionalEvidence)
+            records[id] = evaluate(device: r.device, state: r.state, functionalEvidence: r.functionalEvidence,
+                                   authorizationEvidence: r.authorizationEvidence)
         }
         onChange?()
     }
@@ -166,7 +171,20 @@ public final class DeviceInventory {
     /// Records verified functional communication (only adapters that actually exchanged data may call this).
     public func recordFunctionalCommunication(_ id: DeviceIdentifier, evidence: [String]) {
         guard let r = records[id], r.device.isPresent, !evidence.isEmpty else { return }
-        records[id] = evaluate(device: r.device, state: r.state, functionalEvidence: evidence)
+        records[id] = evaluate(device: r.device, state: r.state, functionalEvidence: evidence, authorizationEvidence: r.authorizationEvidence)
+        onChange?()
+    }
+
+    /// Applies a device-intelligence result: communication and device-side authorization evidence.
+    /// Empty evidence clears the corresponding layer (e.g. after the device was unpaired or locked).
+    public func applyIntelligence(_ id: DeviceIdentifier, communication: [String], authorization: [String]) {
+        guard let r = records[id], r.device.isPresent else { return }
+        guard r.functionalEvidence != communication || r.authorizationEvidence != authorization else { return }
+        var state = r.state
+        if communication.isEmpty && (state.status == .connected || state.status == .authenticated) {
+            state.advance(to: .diagnosticsAvailable, reason: "Device stopped answering")
+        }
+        records[id] = evaluate(device: r.device, state: state, functionalEvidence: communication, authorizationEvidence: authorization)
         onChange?()
     }
 

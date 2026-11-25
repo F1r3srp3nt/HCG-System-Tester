@@ -21,7 +21,9 @@ public enum HostOperationCatalog {
         ]
     }
 
-    public static let descriptors: [DiagnosticTestDescriptor] = standardTests().map(\.descriptor)
+    /// Every host operation adapters may reference, including device-family operations whose
+    /// implementations need a provider (e.g. the Apple Device Intelligence Adapter).
+    public static let descriptors: [DiagnosticTestDescriptor] = standardTests().map(\.descriptor) + AppleDiagnostics.descriptors
     public static var ids: Set<String> { Set(descriptors.map(\.id)) }
     public static func descriptor(_ id: String) -> DiagnosticTestDescriptor? { descriptors.first { $0.id == id } }
 
@@ -55,6 +57,7 @@ public final class DiagnosticEngine {
 
     public func applicability(of d: DiagnosticTestDescriptor, device: DiscoveredDevice, identification: IdentificationResult) -> Applicability {
         if !d.categories.isEmpty && !d.categories.contains(identification.category) { return .wrongCategory }
+        if !d.vendorIDs.isEmpty && !(device.usb?.vendorID.map { d.vendorIDs.contains($0) } ?? false) { return .wrongCategory }
         let caps = DeviceCapability.derive(for: device)
         let missing = d.requiredCapabilities.filter { !caps.contains($0) }
         return missing.isEmpty ? .applicable : .missingCapabilities(missing)

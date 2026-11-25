@@ -70,8 +70,12 @@ public enum ProtocolCatalog {
                            summary: "Interface presence only. Network diagnostics are a planned module."),
         ProtocolDescriptor(id: "usb.vendor-gip", name: "Xbox Game Input Protocol", connectionTypes: [.usb], support: .unavailable,
                            summary: "Vendor-specific controller protocol. Descriptor-level identification only."),
-        ProtocolDescriptor(id: "apple.usbmux", name: "Apple usbmux", connectionTypes: [.usb], support: .requiresAdapter,
-                           summary: "Requires device trust and Apple's supported tooling."),
+        ProtocolDescriptor(id: "apple.usbmux", name: "Apple usbmux", connectionTypes: [.usb], support: .partial,
+                           summary: "Device-services multiplexer. Used through Xcode CoreDevice (devicectl) and optional libimobiledevice after the device trusts this Mac."),
+        ProtocolDescriptor(id: "apple.coredevice", name: "Apple CoreDevice (xcrun devicectl)", connectionTypes: [.usb, .localNetwork], support: .live,
+                           summary: "Structured device, OS, pairing and service information via Xcode's devicectl (JSON). Requires Xcode 15+ and pairing for live data."),
+        ProtocolDescriptor(id: "apple.lockdown", name: "Apple lockdown (libimobiledevice, optional)", connectionTypes: [.usb], support: .partial,
+                           summary: "Battery and disk-usage domains via user-installed libimobiledevice after pairing. Never bundled or installed by System Tester."),
         ProtocolDescriptor(id: "android.adb", name: "Android Debug Bridge", connectionTypes: [.usb, .localNetwork], support: .requiresAdapter,
                            summary: "Requires adb and per-device RSA key approval on the phone."),
         ProtocolDescriptor(id: "thunderbolt.registry", name: "Thunderbolt switch registry", connectionTypes: [.thunderbolt], support: .live,
@@ -120,7 +124,7 @@ public enum ProtocolCatalog {
             case (0x06, _, _): add("usb.ptp")
             case (0xFF, 0x42, 0x01): add("android.adb")
             case (0xFF, 0x47, 0xD0), (0xFF, 0x5D, 0x01): add("usb.vendor-gip")
-            case (0xFF, 0xFE, 0x02): add("apple.usbmux")
+            case (0xFF, 0xFE, 0x02): add("apple.usbmux"); add("apple.coredevice")
             default: break
             }
         }

@@ -98,7 +98,7 @@ final class DiagnosticsTests: XCTestCase {
 
     func testHostCatalogCoversSpecifiedCategories() {
         let uncovered = HostOperationCatalog.uncoveredCategories
-        XCTAssertEqual(uncovered, [.hardwareHealth], "Only hardware health lacks a host test in 0.1.0")
+        XCTAssertEqual(uncovered, [], "Hardware health is covered by the Apple battery & storage test since 0.2.0")
     }
 }
 

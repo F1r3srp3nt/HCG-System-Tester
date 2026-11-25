@@ -48,7 +48,7 @@ public enum SyntheticFixtures {
         usb: USBDeviceDescriptor(vendorID: 0xF00E, productID: 0xBEEF, bcdUSB: 0x0200, speed: .full, locationID: 0xFE400000,
                                  interfaces: [USBInterfaceInfo(number: 0, classCode: 0xFF, subclassCode: 0x12, protocolCode: 0x34)]))
 
-    public static let all: [DiscoveredDevice] = [flashDrive, serialBoard, hub, controllerBehindHub, degradedSSD, unknownDevice]
+    public static let all: [DiscoveredDevice] = [flashDrive, serialBoard, hub, controllerBehindHub, degradedSSD, unknownDevice, AppleSyntheticFixtures.iPhone]
 }
 
 /// Discovery backend that serves synthetic fixtures. Opt-in, and every event it emits is labelled synthetic.

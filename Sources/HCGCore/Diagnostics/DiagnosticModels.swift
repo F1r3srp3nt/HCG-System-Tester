@@ -115,11 +115,13 @@ public struct DiagnosticTestDescriptor: Codable, Hashable, Identifiable {
     public var requiredCapabilities: [DeviceCapability]
     /// Device categories the test is limited to (empty = any).
     public var categories: [DeviceCategory]
+    /// USB vendor IDs the test is limited to (empty = any).
+    public var vendorIDs: [UInt16]
     public var estimatedDurationSeconds: Double
 
     public init(id: String, name: String, category: DiagnosticCategory, impact: OperationImpact = .readOnly, summary: String,
                 effects: String? = nil, requiredCapabilities: [DeviceCapability] = [], categories: [DeviceCategory] = [],
-                estimatedDurationSeconds: Double = 0.1) {
+                vendorIDs: [UInt16] = [], estimatedDurationSeconds: Double = 0.1) {
         self.id = id
         self.name = name
         self.category = category
@@ -128,6 +130,7 @@ public struct DiagnosticTestDescriptor: Codable, Hashable, Identifiable {
         self.effects = effects
         self.requiredCapabilities = requiredCapabilities
         self.categories = categories
+        self.vendorIDs = vendorIDs
         self.estimatedDurationSeconds = estimatedDurationSeconds
     }
 }

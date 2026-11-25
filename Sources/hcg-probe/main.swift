@@ -10,6 +10,8 @@ import HCGHardware
 //   hcg-probe --diagnose      list devices and run the read-only default suite on each
 //   hcg-probe --synthetic     use labelled synthetic fixtures instead of hardware
 //   hcg-probe --show-serials  do not mask serial numbers in terminal output
+//   hcg-probe --toolchain     inspect Xcode / devicectl / libimobiledevice capabilities
+//   hcg-probe --apple         Apple Device Intelligence for every connected iPhone / iPad
 
 let args = Set(CommandLine.arguments.dropFirst())
 if args.contains("--help") || args.contains("-h") {
@@ -22,11 +24,37 @@ if args.contains("--help") || args.contains("-h") {
       hcg-probe --diagnose      run the read-only default diagnostic suite on every device
       hcg-probe --synthetic     use labelled SYNTHETIC fixtures instead of hardware
       hcg-probe --show-serials  show serial numbers unmasked in terminal output
+      hcg-probe --toolchain     inspect Xcode / devicectl / libimobiledevice capabilities
+      hcg-probe --apple         Apple Device Intelligence for every connected iPhone / iPad
+      hcg-probe --apple --pair  also start Apple's pairing flow for unpaired devices (tap Trust on the device)
     """)
     exit(0)
 }
 
 let showSerials = args.contains("--show-serials")
+
+/// Runs an async block to completion from top-level code while keeping the main run loop alive.
+func runAsync(_ body: @escaping () async -> Void) {
+    let group = DispatchGroup()
+    group.enter()
+    Task { await body(); group.leave() }
+    while group.wait(timeout: .now()) == .timedOut {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+}
+
+if args.contains("--toolchain") {
+    runAsync {
+        let t = await AppleToolchainInspector.inspect(runner: ProcessCommandRunner())
+        print("Developer directory : \(t.developerDirectory ?? "not set")")
+        print("Xcode               : \(t.xcodeVersion.map { "\($0) (\(t.xcodeBuild ?? "?"))" } ?? "not found")")
+        print("devicectl           : \(t.devicectlPath ?? "not available") \(t.devicectlVersion ?? "")")
+        print("devicectl commands  : \(t.devicectlSubcommands.isEmpty ? "none detected" : t.devicectlSubcommands.joined(separator: ", "))")
+        print("libimobiledevice    : \(t.ideviceinfoPath ?? "not installed (optional)")")
+        for p in t.problems { print("! \(p)") }
+    }
+    exit(0)
+}
 let useSynthetic = args.contains("--synthetic")
 let inventory = DeviceInventory(keySalt: "hcg-probe")
 /// Serialises inventory access: IOKit delivers events on its own queue.
@@ -108,8 +136,47 @@ if args.contains("--json") {
 
 printRecords()
 
+if args.contains("--apple") {
+    let records = inventoryQueue.sync { inventory.presentRecords }
+    let provider = AppleDeviceIntelligenceProvider(runner: useSynthetic ? SyntheticAppleRunner(paired: false) : ProcessCommandRunner(),
+                                                   provenance: useSynthetic ? .synthetic : .hardware)
+    let apple = records.filter { provider.recognizes($0.device, identification: $0.identification) }
+    if apple.isEmpty { print("\nNo iPhone or iPad is enumerated on USB. Connect one with a data-capable cable and unlock it.") }
+    runAsync {
+        for r in apple {
+            var snap = await provider.snapshot(for: r.device, identification: r.identification)
+            if args.contains("--pair"), snap.nextAction.kind == .pairDevice {
+                print("\nStarting Apple's pairing flow for \(r.device.displayName). Unlock the device and tap Trust…")
+                let outcome = await provider.perform(.pairDevice, for: r.device, identification: r.identification)
+                print("  \(outcome.message)")
+                provider.invalidateCaches()
+                snap = await provider.snapshot(for: r.device, identification: r.identification)
+            }
+            print("\n== Apple Device Intelligence: \(r.device.displayName) ==")
+            print("State \(snap.state.number)/13: \(snap.state.displayName) — \(snap.stateReason)")
+            print("Next action: \(snap.nextAction.title)")
+            for i in snap.nextAction.instructions { print("  • \(i)") }
+            for step in snap.ladder { print("  [\(step.reached ? "x" : " ")] \(step.state.displayName)\(step.evidence.map { " — \($0)" } ?? "")") }
+            for group in IntelligenceGroup.allCases {
+                let fields = snap.fields(in: group)
+                guard !fields.isEmpty else { continue }
+                print("  \(group.displayName):")
+                for f in fields {
+                    let v = f.value.map { f.sensitive && !showSerials ? Redactor.maskSerial($0) : $0 } ?? "unavailable — \(f.unavailableReason ?? "")"
+                    print("    \(f.label): \(v)   [\(f.source.description)]")
+                }
+            }
+            if !snap.services.isEmpty { print("  Services: " + snap.services.map(\.name).joined(separator: ", ")) }
+            for l in snap.limitations { print("  ! \(l)") }
+            for e in snap.errors { print("  ✗ \(e)") }
+        }
+    }
+}
+
 if args.contains("--diagnose") {
-    let engine = DiagnosticEngine()
+    let appleProvider = AppleDeviceIntelligenceProvider(runner: useSynthetic ? SyntheticAppleRunner() : ProcessCommandRunner(),
+                                                        provenance: useSynthetic ? .synthetic : .hardware)
+    let engine = DiagnosticEngine(tests: HostOperationCatalog.standardTests() + appleProvider.diagnosticTests())
     let records = inventoryQueue.sync { inventory.presentRecords }
     let group = DispatchGroup()
     group.enter()

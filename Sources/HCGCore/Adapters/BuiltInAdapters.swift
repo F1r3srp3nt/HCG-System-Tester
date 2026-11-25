@@ -94,15 +94,24 @@ public enum BuiltInAdapters {
     public static let nintendo = consoleResearch(id: "com.hakmicapitalgroup.adapter.nintendo-research", name: "Nintendo Research",
                                                  family: .nintendo, match: DeviceMatchRules(vendorIDs: [0x057E]))
 
-    public static let appleMobile = AdapterManifest(
-        id: "com.hakmicapitalgroup.adapter.apple-mobile", name: "Apple Mobile Devices", version: v010, publisher: publisher,
-        summary: "Identifies iPhone and iPad over USB. Anything beyond descriptors requires the device to trust this Mac and Apple's supported tooling; System Tester does not pair with iOS devices.",
-        execution: .builtIn, deviceFamilies: [.smartphone, .tablet], connectionTypes: [.usb],
-        protocols: ["usb.descriptor", "apple.usbmux"], match: DeviceMatchRules(vendorIDs: [0x05AC]),
-        driverRequirements: [DriverRequirement(name: "usbmuxd (Apple)", providedByMacOS: true)],
+    /// Reference implementation of a device-family adapter (see docs/APPLE-ADAPTER.md).
+    public static let appleDeviceIntelligence = AdapterManifest(
+        id: AppleDeviceIntelligenceProvider.adapterID, name: "Apple Device Intelligence", version: SemanticVersion(0, 2, 0), publisher: publisher,
+        summary: "Identifies iPhone and iPad over USB and retrieves model, OS, pairing, Developer Mode and service information through Xcode's CoreDevice (xcrun devicectl, JSON). Optional libimobiledevice adds battery and free space. Never bypasses Trust, passcodes, USB Restricted Mode or Activation Lock; never enables Developer Mode.",
+        execution: .builtIn, deviceFamilies: [.smartphone, .tablet], connectionTypes: [.usb, .synthetic],
+        protocols: ["usb.descriptor", "usb.ptp", "apple.usbmux", "apple.coredevice", "apple.lockdown"],
+        match: DeviceMatchRules(vendorIDs: [0x05AC]),
+        hardwareRequirements: ["Data-capable USB-C (or Lightning) cable", "Device unlocked for first pairing"],
+        driverRequirements: [DriverRequirement(name: "usbmuxd + CoreDevice (Xcode 15 or later)", providedByMacOS: true, notes: "devicectl ships with Xcode."),
+                             DriverRequirement(name: "libimobiledevice (optional)", providedByMacOS: false, notes: "User-installed; enables battery and free-space domains.")],
         permissions: [.readDeviceDescriptors],
-        operations: [op("host.identification"), op("host.interfaces")],
-        experimental: true)
+        operations: (["host.presence", "host.interfaces", "host.link-speed"] + AppleDiagnostics.descriptors.map(\.id)).map(op),
+        lifecycle: ConnectionLifecycle(stages: [.discover, .identify, .authorize, .diagnose], requiresExplicitAuthorization: false),
+        errors: [disconnectError,
+                 AdapterErrorDescriptor(code: "apple.not-paired", meaning: "The device has not trusted this Mac.", recovery: "Unlock the device, click Pair and tap Trust on the device."),
+                 AdapterErrorDescriptor(code: "apple.locked", meaning: "The device is locked and cannot answer.", recovery: "Unlock the device and keep it awake."),
+                 AdapterErrorDescriptor(code: "apple.no-devicectl", meaning: "Xcode's devicectl is not available.", recovery: "Install Xcode 15+ and select it with xcode-select.")],
+        healthChecks: [HealthCheckDescriptor(id: "apple.presence-health", hostOperation: "host.presence", intervalSeconds: 10)])
 
     public static let android = AdapterManifest(
         id: "com.hakmicapitalgroup.adapter.android", name: "Android Devices", version: v010, publisher: publisher,
@@ -128,5 +137,5 @@ public enum BuiltInAdapters {
         errors: [disconnectError])
 
     public static let all: [AdapterManifest] = [usbCore, usbStorage, usbSerial, hid, thunderbolt, playStation, xbox, nintendo,
-                                                 appleMobile, android, syntheticLab]
+                                                 appleDeviceIntelligence, android, syntheticLab]
 }

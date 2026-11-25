@@ -5,7 +5,7 @@ import Foundation
 public enum ConnectivityAssessor {
     public static func assess(device: DiscoveredDevice, identification: IdentificationResult,
                               compatibility: [AdapterCompatibility], deviceAuthorized: Bool,
-                              functionalEvidence: [String]) -> ConnectivityAssessment {
+                              functionalEvidence: [String], authorizationEvidence: [String] = []) -> ConnectivityAssessment {
         var layers: [LayerAssessment] = []
         let synthetic = device.provenance.isSynthetic
         let tag = synthetic ? "SYNTHETIC: " : ""
@@ -65,7 +65,10 @@ public enum ConnectivityAssessor {
 
         // 4. Authorization
         let needsAuth = compatibility.contains { c in c.availableOperations.contains { $0.impact == .stateChanging } }
-        if deviceAuthorized {
+        if !authorizationEvidence.isEmpty && device.isPresent {
+            layers.append(LayerAssessment(layer: .authorization, state: .verified,
+                reason: tag + "The device authorised this Mac through its own trust mechanism.", evidence: authorizationEvidence))
+        } else if deviceAuthorized {
             layers.append(LayerAssessment(layer: .authorization, state: .verified, reason: "You authorised this device for sessions."))
         } else if needsAuth {
             layers.append(LayerAssessment(layer: .authorization, state: .notVerified,

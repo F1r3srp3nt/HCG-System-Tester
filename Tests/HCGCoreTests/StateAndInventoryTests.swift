@@ -46,7 +46,7 @@ final class InventoryTests: XCTestCase {
         // Nothing is "connected" just because it was recognised.
         XCTAssertFalse(inv.records.values.contains { $0.status == .connected || $0.status == .authenticated })
         XCTAssertEqual(inv.record(Fixtures.sandisk.id)?.status, .diagnosticsAvailable)
-        XCTAssertEqual(inv.record(Fixtures.iphone.id)?.status, .adapterRequired)
+        XCTAssertEqual(inv.record(Fixtures.iphone.id)?.status, .diagnosticsAvailable, "Apple Device Intelligence Adapter exists since 0.2.0")
         XCTAssertEqual(inv.record(Fixtures.pixelADB.id)?.status, .adapterRequired)
         XCTAssertEqual(inv.record(Fixtures.xboxController.id)?.status, .unsupported)
         // Unknown hardware: host diagnostics still apply but nothing is claimed.
