@@ -675,7 +675,7 @@ final class AppModel: ObservableObject {
 
     func displaySerial(_ serial: String?) -> String {
         guard let s = serial else { return "Not reported" }
-        return settings.privacy.hideSerialNumbersInInterface ? Redactor.maskSerial(s) : s
+        return settings.privacy.hideSerialNumbersInInterface || settings.maskDeviceIdentifiers ? Redactor.maskSerial(s) : s
     }
 }
 #endif
