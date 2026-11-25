@@ -350,7 +350,7 @@ public final class AppleDeviceIntelligenceProvider: DeviceIntelligenceProvider {
         }
     }
 
-    public func diagnosticTests() -> [DiagnosticTest] { AppleDiagnostics.tests(provider: self) }
+    public func diagnosticTests() -> [DiagnosticTest] { AppleDiagnostics.tests(providers: [self]) }
 }
 
 /// Assembles a snapshot; keeps the provider logic readable.

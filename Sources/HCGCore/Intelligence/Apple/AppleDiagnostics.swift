@@ -35,22 +35,33 @@ public enum AppleDiagnostics {
     public static let descriptors: [DiagnosticTestDescriptor] = [usbEnumeration, identification, pairing, services, latency, stability,
                                                                   information, reconnect, authorization, compatibility, batteryStorage]
 
-    public static func tests(provider: AppleDeviceIntelligenceProvider) -> [DiagnosticTest] {
-        descriptors.map { AppleTest(descriptor: $0, provider: provider) }
+    /// One test instance per operation, routed to whichever provider recognises the device
+    /// (e.g. the hardware provider for a real iPhone, the synthetic provider for the fixture).
+    public static func tests(providers: [AppleDeviceIntelligenceProvider]) -> [DiagnosticTest] {
+        descriptors.map { AppleTest(descriptor: $0, providers: providers) }
     }
 }
 
 struct AppleTest: DiagnosticTest {
     let descriptor: DiagnosticTestDescriptor
+    let providers: [AppleDeviceIntelligenceProvider]
+
+    func run(_ ctx: DiagnosticContext) async throws -> DiagnosticTestOutput {
+        let device = try ctx.requirePresent()
+        guard let provider = providers.first(where: { $0.recognizes(device, identification: ctx.identification) }) else {
+            return DiagnosticTestOutput(outcome: .notSupported, summary: "Not an Apple iPhone/iPad handled by this adapter.")
+        }
+        return try await RoutedAppleTest(descriptor: descriptor, provider: provider).run(ctx, device)
+    }
+}
+
+struct RoutedAppleTest {
+    let descriptor: DiagnosticTestDescriptor
     let provider: AppleDeviceIntelligenceProvider
 
     var sourceLabel: String { provider.toolSource }
 
-    func run(_ ctx: DiagnosticContext) async throws -> DiagnosticTestOutput {
-        let device = try ctx.requirePresent()
-        guard provider.recognizes(device, identification: ctx.identification) else {
-            return DiagnosticTestOutput(outcome: .notSupported, summary: "Not an Apple iPhone/iPad handled by this adapter.")
-        }
+    func run(_ ctx: DiagnosticContext, _ device: DiscoveredDevice) async throws -> DiagnosticTestOutput {
         switch descriptor.id {
         case AppleDiagnostics.usbEnumeration.id: return usbEnumeration(device)
         case AppleDiagnostics.latency.id: return await latency(ctx, device)

@@ -306,3 +306,39 @@ final class AppleIntelligenceTests: XCTestCase {
         XCTAssertTrue(HostOperationCatalog.ids.contains("apple.query-latency"))
     }
 }
+
+final class DeviceReportTests: XCTestCase {
+    func testDeviceReportsRedactByDefault() async throws {
+        let inv = DeviceInventory(keySalt: "t")
+        let device = usbIPhone()
+        inv.apply(.attached(device))
+        let record = inv.record(device.id)!
+        let provider = AppleDeviceIntelligenceProvider(runner: ScriptedRunner.xcode(paired: true))
+        let snap = await provider.snapshot(for: device, identification: record.identification)
+        let report = DeviceIntelligenceReport.make(kind: .deviceInformation, record: record, snapshot: snap, runs: [])
+        let json = String(decoding: try report.json(), as: UTF8.self)
+        let md = report.markdown()
+        for secret in [AppleSyntheticFixtures.udid, CoreDeviceRecord.normalize(AppleSyntheticFixtures.udid), "SYNTHETICSN"] {
+            XCTAssertFalse(json.contains(secret), secret)
+            XCTAssertFalse(md.contains(secret), secret)
+        }
+        XCTAssertTrue(json.contains(DeviceIntelligenceReport.schemaID))
+        XCTAssertTrue(md.contains("hardwareProperties.productType"), "Markdown lists each field's source")
+        let full = DeviceIntelligenceReport.make(kind: .deviceInformation, record: record, snapshot: snap, runs: [], includeSensitive: true)
+        XCTAssertTrue(String(decoding: try full.json(), as: UTF8.self).contains(AppleSyntheticFixtures.udid), "Explicit opt-in includes identifiers")
+        let compat = DeviceIntelligenceReport.make(kind: .compatibility, record: record, snapshot: snap, runs: [])
+        XCTAssertFalse(compat.adapters.isEmpty)
+    }
+
+    func testInventorySnapshotAndSecurityFindings() async {
+        let inv = DeviceInventory(keySalt: "t")
+        let device = usbIPhone()
+        inv.apply(.attached(device))
+        let provider = AppleDeviceIntelligenceProvider(runner: ScriptedRunner.xcode(paired: false, detailsJSON: nil))
+        let snap = await provider.snapshot(for: device, identification: inv.record(device.id)!.identification)
+        let snapshot = DeviceInventorySnapshot.make(records: inv.presentRecords, snapshots: [device.id: snap], installationID: "i")
+        XCTAssertEqual(snapshot.devices.first?.intelligenceState, .pairingAvailable)
+        let findings = ConnectionSecurityFindings.findings(records: inv.presentRecords, snapshots: [device.id: snap], adapters: AdapterRegistry().adapters)
+        XCTAssertTrue(findings.contains { $0.title.contains("not paired") })
+    }
+}
