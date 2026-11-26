@@ -89,6 +89,13 @@ public struct HCGAIHandoffStatus: Codable, Hashable {
 
     public static let url = "https://ai.hakmicapitalgroup.com/.well-known/hcg-ai-handoff.json"
 
+    public init(state: State, detail: String, apiBaseURL: String?, checkedAt: Date) {
+        self.state = state
+        self.detail = detail
+        self.apiBaseURL = apiBaseURL
+        self.checkedAt = checkedAt
+    }
+
     public static func parse(status: Int, data: Data, at date: Date = Date()) -> HCGAIHandoffStatus {
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         if status == 404 {
