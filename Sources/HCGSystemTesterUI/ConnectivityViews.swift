@@ -328,7 +328,7 @@ struct EncyclopediaView: View {
             .frame(width: 300)
             Divider()
             if let p = c.profile(c.selectedProfileID) {
-                ProfileDetail(profile: p).id(p.id)
+                EncyclopediaProfileDetail(profile: p).id(p.id)
             } else {
                 EmptyStateView(symbol: "books.vertical", title: "Select a profile", message: "Profiles describe how a device can be reached and what is still unknown.")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -338,7 +338,7 @@ struct EncyclopediaView: View {
     }
 }
 
-struct ProfileDetail: View {
+struct EncyclopediaProfileDetail: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var c: ConnectivityModel
     let profile: EncyclopediaProfile
