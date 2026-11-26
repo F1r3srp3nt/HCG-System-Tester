@@ -1,3 +1,39 @@
+# Test results — 0.3.0 Universal Connectivity
+
+CI run 18 on a GitHub `macos-15` runner (commit `14e2401`): debug build, **86 XCTest tests, 0 failures**, read-only probes,
+release app bundle, UI snapshots, Xcode project build — all green.
+
+`hcg-probe --connectivity --ssdp` on the runner (real, unedited):
+
+```
+Universal Connectivity — 17 profiles · 27 protocols · discovery only, nothing is connected
+  Virtual USB Keyboard (Real hardware) → no profile match (discovered only)
+  Virtual USB Digitizer (Real hardware) → no profile match (discovered only)
+Equipment detected on this Mac:
+  cable.usbc-data: Detected — Inferred: 2 USB device(s) enumerated, so a data-capable link exists. …
+  interface.wifi-or-ethernet: Detected — Active interface(s): en0 (Ethernet)
+SSDP: 0 responder(s)
+```
+
+What this shows: real devices that match no profile stay *discovered only* (nothing is invented); equipment is reported
+only where evidenced; the runner's isolated network has no UPnP devices. The roadmap recorded a genuine automatic
+transition (*Hardware required → Ready for connection*) once the Ethernet interface was detected.
+
+**Not verifiable on CI** (no Bluetooth radio, no LAN devices, no iPhone): acceptance steps 2, 3, 4, 6 (physical part)
+and 10 (physical part) — see [CONNECTIVITY-ACCEPTANCE.md](CONNECTIVITY-ACCEPTANCE.md). They are pending on your Mac.
+
+| Universal Connectivity Center | Connection Studio (synthetic iPhone fixture) |
+|---|---|
+| ![](screenshots/c01-connectivityCenter.jpg) | ![](screenshots/c03-connectionStudio.jpg) |
+| Audi R8 research profile | John Deere in the Studio (what must be developed) |
+| ![](screenshots/c20-encyclopedia-audi-r8.jpg) | ![](screenshots/c21-studio-john-deere.jpg) |
+| Development Roadmap (automatic history) | Compatibility Matrix (research vs real evidence) |
+| ![](screenshots/c07-roadmap.jpg) | ![](screenshots/c09-compatibilityMatrix.jpg) |
+| Gap Analyzer | Device Encyclopedia |
+| ![](screenshots/c08-gapAnalyzer.jpg) | ![](screenshots/c02-encyclopedia.jpg) |
+
+---
+
 # Test results — 0.1.0
 
 Environment: GitHub Actions `macos-15` runner (Apple silicon VM, Xcode 16, Swift 6 toolchain in Swift 5 language mode).

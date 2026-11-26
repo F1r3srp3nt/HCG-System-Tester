@@ -347,7 +347,11 @@ public struct EncyclopediaProfile: Codable, Hashable, Identifiable {
         self.origin = origin
     }
 
-    public var displayName: String { [manufacturer, productFamily, model].compactMap { $0 }.joined(separator: " ") }
+    /// "Manufacturer Family Model", without repeating the manufacturer or showing placeholder vendors ("Various …").
+    public var displayName: String {
+        let skipVendor = manufacturer.isEmpty || manufacturer.hasPrefix("Various") || productFamily.lowercased().hasPrefix(manufacturer.lowercased())
+        return ([skipVendor ? nil : manufacturer, productFamily, model].compactMap { $0 }).joined(separator: " ")
+    }
 
     /// All facts in the profile (for source statistics and validation).
     public var allFacts: [SourcedFact] {

@@ -269,3 +269,12 @@ final class EquipmentDetectorTests: XCTestCase {
         XCTAssertEqual(HCGEcosystem.integrations.first { $0.id == "hcg-vanguard" }?.status, .awaitingContract)
     }
 }
+
+final class ProfileNamingTests: XCTestCase {
+    func testDisplayNamesDoNotRepeatTheManufacturer() {
+        let names = EncyclopediaData.all.map(\.displayName)
+        XCTAssertTrue(names.contains("Arduino boards"))
+        XCTAssertFalse(names.contains { $0.hasPrefix("Various") })
+        XCTAssertTrue(names.contains("Audi R8"))
+    }
+}
