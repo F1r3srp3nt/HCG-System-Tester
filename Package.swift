@@ -35,7 +35,10 @@ let package = Package(
             path: "Sources/HCGHardware",
             linkerSettings: [
                 .linkedFramework("IOKit", .when(platforms: [.macOS])),
-                .linkedFramework("CoreFoundation", .when(platforms: [.macOS]))
+                .linkedFramework("CoreFoundation", .when(platforms: [.macOS])),
+                .linkedFramework("CoreBluetooth", .when(platforms: [.macOS])),
+                .linkedFramework("IOBluetooth", .when(platforms: [.macOS])),
+                .linkedFramework("Network", .when(platforms: [.macOS]))
             ]
         ),
         .target(

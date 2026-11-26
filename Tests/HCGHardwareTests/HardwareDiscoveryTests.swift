@@ -50,3 +50,30 @@ final class HardwareDiscoveryTests: XCTestCase {
         XCTAssertGreaterThan(info.memoryBytes, 0)
     }
 }
+
+final class ConnectivityHardwareTests: XCTestCase {
+    func testOnlyPrivateLANHostsAreContacted() {
+        for h in ["192.168.1.20", "10.0.0.5", "172.16.4.1", "172.31.255.254", "169.254.10.10"] { XCTAssertTrue(LocalNetworkPolicy.isPrivateHost(h), h) }
+        for h in ["8.8.8.8", "172.32.0.1", "example.com", "192.168.1", "256.1.1.1", "ai.hakmicapitalgroup.com", ""] { XCTAssertFalse(LocalNetworkPolicy.isPrivateHost(h), h) }
+    }
+
+    func testSamsungInfoRefusesPublicHosts() async {
+        let r = await ReadOnlyHTTP.samsungTVInfo(host: "8.8.8.8")
+        XCTAssertNil(r.info)
+        XCTAssertEqual(r.error, "Only private LAN addresses are queried.")
+    }
+
+    func testBonjourServiceTypesAreDeclaredInBothInfoPlists() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        for rel in ["App/Config/Info.plist", "Packaging/Info.plist"] {
+            let data = try Data(contentsOf: root.appendingPathComponent(rel))
+            let plist = try XCTUnwrap(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
+            XCTAssertNotNil(plist["NSBluetoothAlwaysUsageDescription"], rel)
+            XCTAssertNotNil(plist["NSLocalNetworkUsageDescription"], rel)
+            let declared = Set(plist["NSBonjourServices"] as? [String] ?? [])
+            #if canImport(Network)
+            XCTAssertEqual(declared, Set(BonjourBrowser.serviceTypes), rel)
+            #endif
+        }
+    }
+}

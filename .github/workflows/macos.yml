@@ -53,6 +53,7 @@ jobs:
           swift run hcg-probe --apple
           swift run hcg-probe
           swift run hcg-probe --json > probe.json && head -c 2000 probe.json
+          swift run hcg-probe --connectivity --ssdp
 
       - name: Diagnose synthetic fixtures
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}

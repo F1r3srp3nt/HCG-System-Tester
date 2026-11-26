@@ -27,6 +27,8 @@ if args.contains("--help") || args.contains("-h") {
       hcg-probe --toolchain     inspect Xcode / devicectl / libimobiledevice capabilities
       hcg-probe --apple         Apple Device Intelligence for every connected iPhone / iPad
       hcg-probe --apple --pair  also start Apple's pairing flow for unpaired devices (tap Trust on the device)
+      hcg-probe --connectivity  match devices to encyclopedia profiles and check required equipment (read-only)
+      hcg-probe --connectivity --ssdp   also send one SSDP M-SEARCH on the local network and list responders
     """)
     exit(0)
 }
@@ -131,6 +133,35 @@ if args.contains("--json") {
     let report = ReportGenerator.make(title: "hcg-probe snapshot", runs: [], records: records, redactor: Redactor())
     let data = (try? ReportGenerator.json(report)) ?? Data()
     print(String(decoding: data, as: UTF8.self))
+    exit(0)
+}
+
+if args.contains("--connectivity") {
+    let records = inventoryQueue.sync { inventory.presentRecords }
+    let profiles = EncyclopediaData.all
+    print("Universal Connectivity — \(profiles.count) profiles · \(UniversalProtocolRegistry.all.count) protocols · discovery only, nothing is connected")
+    for r in records {
+        let e = ObservedEndpoint.fromUSB(r.device)
+        let m = EndpointMatcher.match(e, profiles: profiles)
+        let matched = m.isEmpty ? "no profile match (discovered only)" : m.map { "\($0.profileID) [\($0.evidence.joined(separator: ", "))]" }.joined(separator: "; ")
+        print("  \(r.device.displayName) (\(r.device.provenance.displayName)) → \(matched)")
+    }
+    runAsync {
+        let ifs = await HostNetwork.interfaces()
+        let active = ifs.filter { $0.hasAddress && ($0.type == "Wi-Fi" || $0.type == "Ethernet") }.map { "\($0.name) (\($0.type))" }
+        let paths = Set(HostFacts.probedPaths.filter { FileManager.default.fileExists(atPath: $0) })
+        let eq = EquipmentDetector.detect(HostFacts(activeNetworkInterfaces: active, usbDevices: records.map(\.device), existingPaths: paths))
+        print("Equipment detected on this Mac:")
+        for (id, s) in eq.sorted(by: { $0.key < $1.key }) { print("  \(id): \(s.availability.displayName) — \(s.evidence)") }
+        if args.contains("--ssdp") {
+            let found = await SSDPDiscovery.search(timeout: 3)
+            print("SSDP: \(found.count) responder(s)")
+            for e in found {
+                let m = EndpointMatcher.match(e, profiles: profiles).map(\.profileID)
+                print("  \(e.name) · \(e.attributes["serviceType"] ?? "") → \(m.isEmpty ? "no profile match" : m.joined(separator: ", "))")
+            }
+        }
+    }
     exit(0)
 }
 

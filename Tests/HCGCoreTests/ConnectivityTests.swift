@@ -234,3 +234,38 @@ final class RoadmapAndGapTests: XCTestCase {
         XCTAssertTrue(request.contains("manual transfer"))
     }
 }
+
+final class EquipmentDetectorTests: XCTestCase {
+    func testDetectsOnlyWhatIsEvidenced() {
+        let none = EquipmentDetector.detect(HostFacts())
+        XCTAssertTrue(none.isEmpty, "No facts, no detections — nothing is assumed")
+
+        var bridge = usbIPhone()
+        bridge.id = DeviceIdentifier("usb:cp210x")
+        bridge.name = "CP2102N USB to UART Bridge"
+        bridge.usb?.vendorID = 0x10C4
+        let eq = EquipmentDetector.detect(HostFacts(bluetoothPoweredOn: false, activeNetworkInterfaces: ["en0 (Wi-Fi)"], usbDevices: [usbIPhone(), bridge],
+                                                    existingPaths: ["/opt/homebrew/bin/arduino-cli"]))
+        XCTAssertEqual(eq["interface.bluetooth"]?.availability, .missing)
+        XCTAssertEqual(eq["interface.wifi-or-ethernet"]?.availability, .detected)
+        XCTAssertEqual(eq["cable.usbc-data"]?.availability, .detected)
+        XCTAssertEqual(eq["adapter.usb-ttl-3v3"]?.availability, .detected)
+        XCTAssertEqual(eq["software.arduino-cli"]?.availability, .detected)
+        XCTAssertNil(eq["interface.obd2"], "Vehicle interfaces are never inferred")
+        XCTAssertNil(eq["software.ps-remote-play"])
+    }
+
+    func testSyntheticDevicesDoNotCountAsEquipment() {
+        var d = usbIPhone()
+        d.provenance = .synthetic
+        XCTAssertNil(EquipmentDetector.detect(HostFacts(usbDevices: [d]))["cable.usbc-data"])
+    }
+
+    func testRoutesIncludeConnectivitySections() {
+        for r in ["connectivity", "encyclopedia", "connection-studio", "connected-devices", "protocols", "hardware-requirements", "roadmap", "gaps", "compatibility", "assistant", "history"] {
+            XCTAssertNotNil(SystemTesterRoute.parse(URL(string: "hcgsystemtester://open/\(r)")!), r)
+        }
+        XCTAssertNotNil(HCGEcosystem.integrations.first { $0.id == "hcg-ai" })
+        XCTAssertEqual(HCGEcosystem.integrations.first { $0.id == "hcg-vanguard" }?.status, .awaitingContract)
+    }
+}

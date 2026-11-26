@@ -31,7 +31,7 @@ enum SnapshotDriver {
             }
             let target = model.presentRecords.first { $0.device.provenance.isSynthetic && $0.device.name.contains("iPhone") }
                 ?? model.presentRecords.first
-            for section in WorkspaceSection.allCases {
+            for section in WorkspaceSection.workspaceSections {
                 model.section = section
                 if section == .connectedSystems || section == .diagnostics { model.selectedDeviceID = target?.id }
                 if section == .diagnostics, let t = target {
@@ -43,7 +43,7 @@ enum SnapshotDriver {
                     model.generateReport(title: "Snapshot report", runs: model.recentRuns, deviceIDs: model.presentRecords.map(\.id))
                 }
                 try? await Task.sleep(nanoseconds: 1_800_000_000)
-                capture(name: String(format: "%02ld-%@", (WorkspaceSection.allCases.firstIndex(of: section) ?? 0) + 1, section.rawValue), into: dir)
+                capture(name: String(format: "%02ld-%@", (WorkspaceSection.workspaceSections.firstIndex(of: section) ?? 0) + 1, section.rawValue), into: dir)
             }
             // Device Intelligence workspace on the synthetic iPhone: before and after Apple's (simulated) pairing flow.
             if let t = target {
@@ -60,6 +60,27 @@ enum SnapshotDriver {
                     capture(name: "2\(DeviceWorkspaceTab.allCases.firstIndex(of: tab)! + 1)-workspace-\(tab.rawValue)", into: dir)
                 }
             }
+            // Universal Connectivity sections (read-only; no scans or connections are started).
+            let connectivity = model.connectivity
+            for (i, section) in WorkspaceSection.connectivitySections.enumerated() {
+                switch section {
+                case .encyclopedia: connectivity.selectedProfileID = "samsung.smart-tv"
+                case .connectionStudio: connectivity.selectedProfileID = "apple.iphone-ipad"
+                case .assistant: connectivity.selectedProfileID = "sony.playstation5"
+                default: break
+                }
+                model.section = section
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                capture(name: String(format: "c%02ld-%@", i + 1, section.rawValue), into: dir)
+            }
+            connectivity.selectedProfileID = "audi.r8"
+            model.section = .encyclopedia
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            capture(name: "c20-encyclopedia-audi-r8", into: dir)
+            connectivity.selectedProfileID = "johndeere.tractor"
+            model.section = .connectionStudio
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            capture(name: "c21-studio-john-deere", into: dir)
             let summary = model.records.map { "\($0.device.displayName)\t\($0.status.displayName)\t\($0.device.provenance.rawValue)" }.joined(separator: "\n")
             try? summary.write(to: dir.appendingPathComponent("devices.tsv"), atomically: true, encoding: .utf8)
             NSApp.terminate(nil)

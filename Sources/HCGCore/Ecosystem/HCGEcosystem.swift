@@ -104,7 +104,29 @@ public enum HCGEcosystem {
             id: "hcg-executable-maker", product: "HCG Executable Maker", role: "Building and packaging",
             status: .available, contract: "SwiftPM package + AppPackaging.json (hcg-app-packaging/1)",
             details: ["Executable Maker builds System Tester from Package.swift (product HCGSystemTester). Publication stays manual."],
-            supported: ["Package the app", "Package approved adapter projects (planned)"])
+            supported: ["Package the app", "Package approved adapter projects (planned)"]),
+        EcosystemIntegration(
+            id: "hcg-ai", product: "HCG AI", role: "Research assistance for connection development (suggestions only)",
+            status: .notConfigured, contract: "Public handoff https://ai.hakmicapitalgroup.com/.well-known/hcg-ai-handoff.json · native public client per product",
+            details: [
+                "The handoff document returns 404 not_published until a native client is issued; central chat currently answers 501 chat_unavailable.",
+                "No native client exists for System Tester, so no device data is ever sent. Research requests are prepared as redacted text you transfer manually.",
+                "AI output is always labelled “AI suggestion” and never changes compatibility, roadmap state or devices."
+            ],
+            supported: ["Check handoff availability (explicit, sends no device data)", "Prepare redacted research request (manual transfer)", "Assistant chat (after client registration)"]),
+        EcosystemIntegration(
+            id: "hcg-vanguard", product: "HCG Vanguard", role: "Not yet defined for System Tester",
+            status: .awaitingContract, contract: "No published contract found",
+            details: ["No Vanguard repository or interface contract was available, so System Tester does not integrate with it. Nothing is assumed."],
+            supported: ["To be defined once a contract is published"]),
+        EcosystemIntegration(
+            id: "hcg-lifeos", product: "HCG LifeOS", role: "Development planning (quests from development gaps)",
+            status: .available, contract: "LifeOS backlog import hcg.lifeos.backlog (schema 2) — stable quest keys, no XP, status backlog",
+            details: [
+                "Gap Analyzer exports selected development requirements as proposed quests with stable keys (hcg.systemtester.<gap-id>), so re-exports never duplicate.",
+                "System Tester never awards XP, never completes quests and never modifies the LifeOS registry; you import and approve in LifeOS."
+            ],
+            supported: ["Export proposed quests (file)", "Quest completion from genuine evidence (requires LifeOS approval)"])
     ]
 }
 
@@ -149,6 +171,17 @@ public enum SystemTesterRoute: String, CaseIterable, Hashable {
     case ecosystem
     case reports
     case settings
+    case connectivity
+    case encyclopedia
+    case connectionStudio = "connection-studio"
+    case connectedDevices = "connected-devices"
+    case protocols
+    case hardwareRequirements = "hardware-requirements"
+    case roadmap
+    case gaps
+    case compatibility
+    case assistant
+    case history
 
     public static let scheme = "hcgsystemtester"
 

@@ -37,6 +37,34 @@
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>HCG System Tester scans for Bluetooth devices only when you start a scan, and reads standard device-information characteristics only from a device you approve. It never writes to devices.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>HCG System Tester discovers devices on your local network (Bonjour and UPnP/SSDP) only when you start a discovery, and reads public device information only from devices you select.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_airplay._tcp</string>
+		<string>_raop._tcp</string>
+		<string>_googlecast._tcp</string>
+		<string>_hap._tcp</string>
+		<string>_matter._tcp</string>
+		<string>_matterc._udp</string>
+		<string>_meshcop._udp</string>
+		<string>_device-info._tcp</string>
+		<string>_ssh._tcp</string>
+		<string>_workstation._tcp</string>
+		<string>_ipp._tcp</string>
+		<string>_smb._tcp</string>
+		<string>_companion-link._tcp</string>
+		<string>_mqtt._tcp</string>
+		<string>_http._tcp</string>
+		<string>_spotify-connect._tcp</string>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Hakmi Capital Group</string>
 	<key>NSSupportsAutomaticTermination</key>

@@ -38,7 +38,13 @@ struct WorkspaceCommands: Commands {
 
     var body: some Commands {
         CommandMenu("Workspace") {
-            ForEach(WorkspaceSection.allCases) { section in
+            ForEach(WorkspaceSection.workspaceSections) { section in
+                Button(section.title) { model.section = section }
+                    .keyboardShortcut(section.shortcut, modifiers: section.shortcutModifiers)
+            }
+        }
+        CommandMenu("Connectivity") {
+            ForEach(WorkspaceSection.connectivitySections) { section in
                 Button(section.title) { model.section = section }
                     .keyboardShortcut(section.shortcut, modifiers: section.shortcutModifiers)
             }
@@ -97,6 +103,7 @@ struct SectionContent: View {
         case .ecosystem: EcosystemView()
         case .reports: ReportsView()
         case .settings: SettingsView()
+        default: ConnectivitySectionHost(section: section)
         }
     }
 }
@@ -107,7 +114,7 @@ struct Sidebar: View {
     var body: some View {
         List(selection: Binding<WorkspaceSection?>(get: { model.section }, set: { if let s = $0 { model.section = s } })) {
             Section {
-                ForEach(WorkspaceSection.allCases) { section in
+                ForEach(WorkspaceSection.workspaceSections) { section in
                     Label(section.title, systemImage: section.symbol)
                         .tag(section)
                         .badge(badge(for: section))
@@ -118,6 +125,12 @@ struct Sidebar: View {
                     Text("v\(HCGSystemTesterInfo.version) · \(HCGSystemTesterInfo.realm)").font(.caption2).foregroundStyle(Theme.dim)
                 }
                 .padding(.bottom, 6)
+            }
+            Section("Universal Connectivity") {
+                ForEach(WorkspaceSection.connectivitySections) { section in
+                    Label(section.title, systemImage: section.symbol)
+                        .tag(section)
+                }
             }
             Section("Live") {
                 LiveDiscoveryIndicator()

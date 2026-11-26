@@ -7,6 +7,13 @@ import HCGHardware
 
 enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
     case commandCenter, connectedSystems, liveMonitor, visualizer, usbInspector, diagnostics, laboratory, adapterLibrary, developerStudio, ecosystem, reports, settings
+    case connectivityCenter, encyclopedia, connectionStudio, connectedDevices, protocolRegistry, hardwareRequirements, roadmap, gapAnalyzer, compatibilityMatrix, assistant, connectionHistory
+
+    static let workspaceSections: [WorkspaceSection] = [.commandCenter, .connectedSystems, .liveMonitor, .visualizer, .usbInspector, .diagnostics,
+                                                        .laboratory, .adapterLibrary, .developerStudio, .ecosystem, .reports, .settings]
+    static let connectivitySections: [WorkspaceSection] = [.connectivityCenter, .encyclopedia, .connectionStudio, .connectedDevices, .protocolRegistry,
+                                                           .hardwareRequirements, .roadmap, .gapAnalyzer, .compatibilityMatrix, .assistant, .connectionHistory]
+    var isConnectivity: Bool { WorkspaceSection.connectivitySections.contains(self) }
 
     var id: String { rawValue }
 
@@ -21,9 +28,20 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .laboratory: return "Device Laboratory"
         case .adapterLibrary: return "Adapter Library"
         case .developerStudio: return "Adapter Developer Studio"
-        case .ecosystem: return "HCG Ecosystem"
+        case .ecosystem: return "Ecosystem Integrations"
         case .reports: return "Reports"
         case .settings: return "Settings"
+        case .connectivityCenter: return "Universal Connectivity Center"
+        case .encyclopedia: return "Device Encyclopedia"
+        case .connectionStudio: return "Connection Studio"
+        case .connectedDevices: return "Connected Devices"
+        case .protocolRegistry: return "Protocol Registry"
+        case .hardwareRequirements: return "Hardware Requirements"
+        case .roadmap: return "Development Roadmap"
+        case .gapAnalyzer: return "Gap Analyzer"
+        case .compatibilityMatrix: return "Compatibility Matrix"
+        case .assistant: return "AI Connection Assistant"
+        case .connectionHistory: return "Connection History"
         }
     }
 
@@ -41,6 +59,17 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .ecosystem: return "circle.hexagongrid"
         case .reports: return "doc.richtext"
         case .settings: return "gearshape"
+        case .connectivityCenter: return "dot.radiowaves.left.and.right"
+        case .encyclopedia: return "books.vertical"
+        case .connectionStudio: return "wand.and.rays"
+        case .connectedDevices: return "link.circle"
+        case .protocolRegistry: return "list.bullet.rectangle"
+        case .hardwareRequirements: return "cable.coaxial"
+        case .roadmap: return "map"
+        case .gapAnalyzer: return "exclamationmark.triangle"
+        case .compatibilityMatrix: return "tablecells"
+        case .assistant: return "sparkles"
+        case .connectionHistory: return "clock.arrow.circlepath"
         }
     }
 
@@ -58,11 +87,23 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .ecosystem: return "8"
         case .reports: return "9"
         case .settings: return "0"
+        case .connectivityCenter: return "c"
+        case .encyclopedia: return "e"
+        case .connectionStudio: return "s"
+        case .connectedDevices: return "k"
+        case .protocolRegistry: return "p"
+        case .hardwareRequirements: return "h"
+        case .roadmap: return "m"
+        case .gapAnalyzer: return "g"
+        case .compatibilityMatrix: return "x"
+        case .assistant: return "a"
+        case .connectionHistory: return "y"
         }
     }
 
     var shortcutModifiers: EventModifiers {
-        self == .liveMonitor || self == .usbInspector ? [.command, .option] : .command
+        if isConnectivity { return [.command, .control] }
+        return self == .liveMonitor || self == .usbInspector ? [.command, .option] : .command
     }
 
     var route: SystemTesterRoute {
@@ -79,6 +120,17 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .ecosystem: return .ecosystem
         case .reports: return .reports
         case .settings: return .settings
+        case .connectivityCenter: return .connectivity
+        case .encyclopedia: return .encyclopedia
+        case .connectionStudio: return .connectionStudio
+        case .connectedDevices: return .connectedDevices
+        case .protocolRegistry: return .protocols
+        case .hardwareRequirements: return .hardwareRequirements
+        case .roadmap: return .roadmap
+        case .gapAnalyzer: return .gaps
+        case .compatibilityMatrix: return .compatibility
+        case .assistant: return .assistant
+        case .connectionHistory: return .history
         }
     }
 
@@ -172,6 +224,8 @@ final class AppModel: ObservableObject {
     private let syntheticBackend = SyntheticDiscoveryBackend()
     private var started = false
     var activeSessionID: UUID?
+    /// Universal Connectivity (created on first use; creating it never scans or connects).
+    lazy var connectivity = ConnectivityModel(app: self)
 
     init() {
         let s = AppSettings.load()
@@ -304,6 +358,7 @@ final class AppModel: ObservableObject {
                 if last?.event != "Attached" { laboratory.observe(r, event: "Attached") }
             }
             if d.provenance == .hardware { newDevicePulse = d.id }
+            connectivity.usbAttached(d)
         case .detached(let id, _):
             intelligenceTasks[id]?.cancel()
             intelligenceTasks[id] = nil
@@ -311,6 +366,7 @@ final class AppModel: ObservableObject {
                 if settings.recordConnectionsInLaboratory { laboratory.observe(r, event: "Detached") }
                 intelligence.markDisconnected(id, key: r.stableKey)
                 liveMonitor.disconnected(key: r.stableKey)
+                connectivity.usbDetached(r.device)
                 intelligenceRevision += 1
             }
             if let run = activeRuns[id] { banner = "\(run.deviceName) disconnected during diagnostics." }
@@ -392,6 +448,7 @@ final class AppModel: ObservableObject {
         intelligence.record(snap, key: current.stableKey)
         lastIntelligenceRefresh[id] = Date()
         inventory.applyIntelligence(id, communication: snap.communicationEvidence, authorization: snap.authorizationEvidence)
+        connectivity.intelligenceUpdated(current, snapshot: snap)
         intelligenceRevision += 1
         refreshPublishedState()
     }
@@ -530,6 +587,7 @@ final class AppModel: ObservableObject {
             activeSessionID = sessionID
         }
         laboratory.append(run, to: sessionID)
+        connectivity.diagnosticsFinished(run, record: record)
         // Synthetic fixtures exchange data with the engine; record it (labelled) so the full state machine can be exercised.
         if record.device.provenance.isSynthetic,
            run.results.contains(where: { $0.testID == "synthetic.fault-injection" && $0.outcome == .passed }) {
