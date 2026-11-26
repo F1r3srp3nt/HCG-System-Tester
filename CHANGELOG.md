@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 — Universal Device Connectivity and Engineering Roadmap
+
+- Universal Connectivity Center (25 categories), Device Connectivity Encyclopedia (17 sourced profiles, information
+  requests, tolerant user-profile JSON that cannot claim HCG verification), Universal Protocol Registry (27 protocols with
+  separate discovery/communication support, dependencies, permissions and validation status), equipment catalogue and
+  Hardware Requirements Center (detected vs declared).
+- macOS connectivity layer, all user-started and read-only: Core Bluetooth scan and allow-listed GATT read
+  (Device Information, Battery) with automatic disconnect; paired Bluetooth Classic list; DNS-SD browse of declared
+  service types; one-shot SSDP M-SEARCH and UPnP description (private LAN hosts only); Samsung TV `:8001/api/v2/`;
+  host interfaces; HCG AI public handoff check. Info.plist usage descriptions and `NSBonjourServices`.
+- Evidence model (discovered / connection attempt / diagnostics / your report) fed automatically by IOKit discovery,
+  Apple device intelligence and diagnostic runs; synthetic evidence recorded but excluded.
+- Living Development Roadmap (17 states, manual decisions with refusal rules, full history kept across disconnects),
+  Development Gap Analyzer (11 gap kinds, stable IDs, dependencies, priorities), proposed LifeOS quests
+  (`hcg.lifeos.backlog` schema 2, no XP), 14-step Guided Connection Studio with single-use approval, Live Connection
+  Center, Compatibility Matrix, Connection History, rule-based Connection Assistant with redacted research requests.
+- Ecosystem: HCG AI, HCG LifeOS and HCG Vanguard (no contract found) entries; 11 new navigation routes.
+- `hcg-probe --connectivity [--ssdp]`; CI renders all new sections.
+
 ## 0.2.0 — Device Intelligence Update
 
 - Universal Device Intelligence Engine: provider protocol, sourced fields (every value names its tool and key; every gap

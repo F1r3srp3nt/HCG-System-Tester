@@ -6,12 +6,16 @@
 > ([`docs/lifeos/hcg-system-tester.backlog.json`](lifeos/hcg-system-tester.backlog.json), `hcg.lifeos.backlog` schema 2,
 > realm *Sovereign Technology*). It has **not** been imported, and nothing awards XP. Import it yourself if you agree; it is idempotent by key.
 
+> **0.3.0:** the in-app Gap Analyzer now generates development requirements from the encyclopedia and exports them as
+> proposed quests with stable keys. That export supersedes hand-written quests for connectivity work.
+
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M1 — 0.1.0 MVP** (this release) | Real USB/Thunderbolt discovery, identification, five-layer assessment, adapter SDK, diagnostics, laboratory, visualizer, studio, reports, ecosystem panel, CLI | [Physical checklist](PHYSICAL-TESTING.md) completed on the M4 Max with reports exported |
 | **M1.5 — 0.2.0 Device Intelligence** (this release) | Apple Device Intelligence Adapter, 13-state ladder, workspace, Live Monitor, USB Inspector, Visualizer 2.0 | [iPhone acceptance test](IPHONE-ACCEPTANCE.md) passed on iPhone 16 Pro Max and iPad Pro M4 |
+| **M1.7 — 0.3.0 Universal Connectivity** (this release) | Encyclopedia, protocol registry, equipment, evidence-driven roadmap, gaps, LifeOS quest export, Connection Studio, BLE/Bonjour/SSDP/Samsung TV read-only drivers | [12-step connectivity acceptance test](CONNECTIVITY-ACCEPTANCE.md): physical steps 1–4, 6, 10 on your Mac |
 | **M2 — Serial sessions** | Authorised, read-only serial port open; loopback/echo; measured round-trip latency | The first real device reaches **Connected** with evidence |
-| **M3 — Network & Bluetooth** | Network framework path monitoring, DNS-SD for documented services, Core Bluetooth discovery; Local Network and Bluetooth permission texts | Network nodes in the Visualizer; reachability and latency diagnostics |
+| **M3 — Network & Bluetooth** | *Discovery shipped in 0.3.0.* Remaining: network nodes in the Visualizer, reachability and latency diagnostics, BLE diagnostics beyond Device Information | Network/BLE nodes in the Visualizer with measured latency |
 | **M4 — Storage health** | SMART/health through bridges that expose it via supported APIs | Health reported where available, limitation reported otherwise |
 | **M5 — Console research** | PlayStation/Xbox: documented network presence, controller diagnostics over Bluetooth, compatibility reports | Evidence-backed compatibility matrix, no security bypass |
 | **M6 — IoT / appliances** | Matter, MQTT (read-only), manufacturer APIs with explicit authorisation | Read-only measurements from at least one real appliance |

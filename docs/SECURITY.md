@@ -18,5 +18,9 @@
 | Outbound URLs | Allow-listed Terminal and Sentinel destinations only; no data from devices or manifests is ever forwarded |
 | Entitlements | Development builds are not sandboxed (IOKit registry access). No `root`, no helper tools, no kernel or DriverKit extensions |
 
+| Universal Connectivity (0.3.0) | Bluetooth, Bonjour and SSDP start only from a button; attempts need a single-use approval (audited); drivers are read-only; BLE reads an allow-list of standard characteristics and never writes; only RFC 1918 / link-local hosts are contacted; vehicle, machinery, robot and drone control is a prohibited protocol |
+| Sensitive identifiers (0.3.0) | BLE identifiers, MAC addresses, LAN addresses, serials and TV IDs are marked sensitive and masked in the UI while *Mask device identifiers* is on; unmatched scan results are never persisted |
+| AI (0.3.0) | Rule-based assistant labelled *not AI*; HCG AI is checked via its public handoff only; research requests are redacted and transferred manually; suggestions are never executed |
+
 Production security changes (sandboxing for distribution, Developer ID, notarisation, credential storage) need the founder's
 manual approval.

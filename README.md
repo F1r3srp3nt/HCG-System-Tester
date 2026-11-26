@@ -1,7 +1,7 @@
 # HCG System Tester
 
 **Modular system connectivity, hardware discovery and diagnostics for macOS.**
-Hakmi Capital Group · `com.hakmicapitalgroup.systemtester` · version 0.2.0 · LifeOS realm: Sovereign Technology
+Hakmi Capital Group · `com.hakmicapitalgroup.systemtester` · version 0.3.0 · LifeOS realm: Sovereign Technology
 
 > **EVERYTHING IS INTERCHANGEABLE.** Build. Connect. Discover. Diagnose. Improve.
 
@@ -23,6 +23,31 @@ exchanged data. Unknown devices are shown with their raw descriptors and are nev
 
 *Command Center on a CI Mac: two real (virtual) USB devices discovered by IOKit, plus opt-in fixtures labelled SYNTHETIC.
 More screenshots and CI results are in [docs/TEST-RESULTS.md](docs/TEST-RESULTS.md).*
+
+## New in 0.3.0: Universal Connectivity
+
+- **Universal Connectivity Center** with 25 categories (computers, phones, consoles, TVs, vehicles, agricultural and
+  industrial equipment, robotics, drones, microcontrollers, sensors, smart home, radio …) and user-started discovery:
+  USB/Thunderbolt (IOKit), Bluetooth LE scan, paired Bluetooth Classic, Bonjour and SSDP. Nothing runs at launch.
+- **Device Connectivity Encyclopedia**: 17 structured profiles (PS5, Samsung Smart TV, Audi R8, John Deere, ISOBUS,
+  industrial arms, ROS 2, DJI, Raspberry Pi, Arduino, ESP32, iPhone/iPad, Mac, Windows, Linux, BLE sensors, Matter/HomeKit).
+  Every fact is labelled *Manufacturer*, *Community*, *AI suggestion*, *HCG verified* or *HCG note*. Your own profiles load from JSON.
+- **Protocol Registry** (27 protocols, discovery and communication declared separately), **Hardware Requirements Center**,
+  **14-step Connection Studio** with single-use approval and read-only drivers (USB re-read, Apple CoreDevice, BLE GATT
+  Device Information/Battery read, UPnP description, Samsung TV `:8001/api/v2/`).
+- **Living Development Roadmap** (17 states) that updates itself only from real-hardware evidence or your physical-test
+  reports; manual decisions are recorded with notes and history. **Gap Analyzer** with stable IDs, dependencies, priorities
+  and **proposed LifeOS quests** (no XP, never auto-completed). **Compatibility Matrix**, **Connection History**,
+  **AI Connection Assistant** (rule-based, labelled *not AI*; HCG AI availability check; redacted research request).
+- Vehicles, machinery, robots and drones are **read-only research**; control is prohibited.
+  → [docs/UNIVERSAL-CONNECTIVITY.md](docs/UNIVERSAL-CONNECTIVITY.md) · [12-step acceptance test](docs/CONNECTIVITY-ACCEPTANCE.md)
+
+| Capability (0.3.0) | Status |
+|---|---|
+| USB enumeration evidence, profile matching, roadmap, gaps, LifeOS export | ✅ implemented, unit-tested, CI-verified with the runner's real virtual USB devices |
+| Bluetooth LE scan + allow-listed GATT read, Bonjour, SSDP, Samsung TV info | ⚙︎ implemented; **awaiting physical verification on your Mac** (CI runners have no radio or LAN devices) |
+| PS5, Samsung TV, Audi R8, agricultural, robotics, drone profiles | 📚 research profiles — no compatibility claimed |
+| HCG AI assistant chat | ⏳ blocked: no native client issued for System Tester; handoff answers `not_published` |
 
 ## New in 0.2.0: Device Intelligence
 
@@ -114,6 +139,7 @@ docs/                         Architecture, SDK, testing, limitations, ecosystem
 ## Documentation
 
 - [Build & run on macOS](docs/BUILD.md)
+- [Universal Connectivity](docs/UNIVERSAL-CONNECTIVITY.md) · [12-step connectivity acceptance test](docs/CONNECTIVITY-ACCEPTANCE.md)
 - [iPhone 16 Pro Max acceptance test](docs/IPHONE-ACCEPTANCE.md)
 - [Apple Device Intelligence Adapter](docs/APPLE-ADAPTER.md)
 - [Physical-device test checklist](docs/PHYSICAL-TESTING.md)
@@ -134,4 +160,7 @@ docs/                         Architecture, SDK, testing, limitations, ecosystem
   Every decision is written to an audit log.
 - Serial numbers, user paths, network identifiers and credentials are redacted from reports and logs.
 - No console, phone or appliance security control is ever bypassed.
+- Bluetooth, Bonjour and SSDP discovery start only when you press a button; connecting needs a single-use approval and is
+  read-only. Vehicle, machinery, robot and drone control, firmware flashing and radio transmission are never performed.
+- AI output is labelled and never changes state, devices or files; nothing is sent to HCG AI.
 - Publication to HCG Store, GitHub Releases or any other channel is a manual decision. This repository only builds.

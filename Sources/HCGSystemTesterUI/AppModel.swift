@@ -89,7 +89,7 @@ enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable {
         case .settings: return "0"
         case .connectivityCenter: return "c"
         case .encyclopedia: return "e"
-        case .connectionStudio: return "s"
+        case .connectionStudio: return "w"
         case .connectedDevices: return "k"
         case .protocolRegistry: return "p"
         case .hardwareRequirements: return "h"
